@@ -1,0 +1,42 @@
+{
+  "name": "gdevelop-assistant",
+  "version": "1.0.0",
+  "description": "AI Agents and Game Servers for GDevelop with Puter Database and Cloud Storage",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "start:ai-agents": "node src/ai-agents/index.js",
+    "start:game-server": "node src/game-server/index.js",
+    "start:puter-db": "node src/puter-db/index.js",
+    "start:cloud-storage": "node src/cloud-storage/index.js",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "deploy:local": "docker-compose up",
+    "deploy:prod": "kubectl apply -f deploy/kubernetes/",
+    "example": "node examples/client.js"
+  },
+  "keywords": [
+    "gdevelop",
+    "ai-agents",
+    "game-server",
+    "puter",
+    "cloud-storage"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "dotenv": "^16.0.3",
+    "axios": "^1.6.0",
+    "mongoose": "^8.0.0",
+    "redis": "^4.6.0",
+    "aws-sdk": "^2.1500.0",
+    "openai": "^4.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
