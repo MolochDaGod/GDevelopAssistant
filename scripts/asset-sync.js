@@ -114,24 +114,30 @@ function patternToRegex(pattern) {
 function getSubcategoryPath(filePath, sourceDir) {
   const relativePath = path.relative(sourceDir, filePath);
   const dirPath = path.dirname(relativePath);
-
-  // Extract meaningful subcategory (first folder after known patterns)
   const parts = dirPath.split(path.sep);
+
+  // 1) Per-tab grouping: attached_assets/tabs/<slug>/...
+  const tabsIdx = parts.indexOf('tabs');
+  if (tabsIdx >= 0 && parts.length > tabsIdx + 1) {
+    const slug = parts[tabsIdx + 1];
+    return slug || 'default';
+  }
+
+  // 2) Extract meaningful subcategory (first folder after known patterns)
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (
-      part === "sprites" ||
-      part === "models" ||
-      part === "characters" ||
-      part === "buildings" ||
-      part === "hero-units"
+      part === 'sprites' ||
+      part === 'models' ||
+      part === 'characters' ||
+      part === 'buildings' ||
+      part === 'hero-units'
     ) {
-      // Return from this point onwards
-      return parts.slice(i).join(path.sep) || "default";
+      return parts.slice(i).join(path.sep) || 'default';
     }
   }
 
-  return "default";
+  return 'default';
 }
 
 /**

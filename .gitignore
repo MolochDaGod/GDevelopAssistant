@@ -14,10 +14,10 @@ public/games
 client/public/assets
 
 # Documentation and development files
-docs
+# Keep docs, ignore only large binaries if any
+!docs/
 extensions
 scripts
-!scripts/
 *.md
 !replit.md
 .env*.local
