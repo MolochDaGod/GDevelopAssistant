@@ -1,0 +1,11 @@
+{
+  "slug": "grudge-swarm",
+  "title": "Grudge Swarm RTS",
+  "version": "0.1.0",
+  "description": "Top-down RTS with fog of war, sprites, and AI.",
+  "routes": [{ "path": "/grudge-swarm", "entry": "tabs/grudge-swarm/index.tsx" }],
+  "assets": {
+    "sprites": "assets/grudge-swarm/sprites/",
+    "models": "assets/grudge-swarm/models/"
+  }
+}
