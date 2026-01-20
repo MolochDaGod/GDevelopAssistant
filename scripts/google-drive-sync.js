@@ -13,12 +13,19 @@ import { google } from 'googleapis';
 
 const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID || '1qEtqs7DJcZE24MV55NwVltmUd-PQT4L8';
 const SA_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+const LOCAL_SA_PATH = path.resolve(process.cwd(), 'drive-service-account.json');
 const OUTPUT_DIR = path.resolve(process.cwd(), 'attached_assets', 'drive');
 
 async function main() {
-  // Safe no-op if env missing (so local builds don't break)
-  if (!SA_JSON || !DRIVE_FOLDER_ID) {
-    console.log('ℹ️  Skipping Google Drive sync (missing GOOGLE_SERVICE_ACCOUNT_JSON or DRIVE_FOLDER_ID)');
+  // Resolve credentials (env or local file) and safe no-op if still missing
+  let rawCred = SA_JSON;
+  if (!rawCred && fs.existsSync(LOCAL_SA_PATH)) {
+    rawCred = fs.readFileSync(LOCAL_SA_PATH, 'utf8');
+    console.log(`🔑 Using local service account file: ${path.basename(LOCAL_SA_PATH)}`);
+  }
+
+  if (!rawCred || !DRIVE_FOLDER_ID) {
+    console.log('ℹ️  Skipping Google Drive sync (missing GOOGLE_SERVICE_ACCOUNT_JSON and no local drive-service-account.json, or missing DRIVE_FOLDER_ID)');
     process.exit(0);
     return;
   }
@@ -26,11 +33,11 @@ async function main() {
   // Parse service account JSON (supports raw JSON or base64-encoded)
   let creds;
   try {
-    const raw = SA_JSON.trim();
+    const raw = rawCred.trim();
     const json = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
     creds = JSON.parse(json);
   } catch (e) {
-    console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', e?.message || e);
+    console.error('❌ Failed to parse service account JSON:', e?.message || e);
     process.exit(1);
   }
 
