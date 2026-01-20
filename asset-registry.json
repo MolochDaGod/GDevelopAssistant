@@ -1,0 +1,143 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-20",
+  "googleDriveFolderStructure": {
+    "root": "GrudgeStudio/Assets",
+    "description": "Root folder in Google Drive containing all Grudge Studio assets",
+    "subfolders": {
+      "3d-models": {
+        "characters": "Character GLB files (Adventurer, Knight, Wizard, etc.)",
+        "buildings": "Building/structure GLB files (Houses, Docks, Ports, etc.)",
+        "vehicles": "Vehicle GLB files (Ships, Lifrafts, etc.)",
+        "creatures": "Enemy/NPC creature models"
+      },
+      "sprites": {
+        "hero-units": "Procedurally generated 2D hero unit sprites (6 animations × 4 frames each)",
+        "ui": "UI sprites (emblems, icons, buttons, etc.)",
+        "environments": "Background and tileset sprites",
+        "vfx": "Visual effects sprites (particles, explosions, etc.)"
+      },
+      "animations": {
+        "skeleton": "Skeleton/rigging data for 3D models",
+        "motion": "Additional animation files and data"
+      },
+      "audio": {
+        "sfx": "Sound effects (unit sounds, combat, UI)",
+        "music": "Background music tracks"
+      }
+    }
+  },
+  "assetCategories": {
+    "models-3d": {
+      "type": "3D Model",
+      "extensions": ["glb", "gltf"],
+      "projects": ["GDevelopAssistant", "DiabloGrudge-Server", "Grudge-RPG-Sprite-Attack"],
+      "description": "3D models in GLB format for rendering"
+    },
+    "sprites": {
+      "type": "2D Sprite",
+      "extensions": ["png", "webp"],
+      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack", "Warlord-Crafting-Suite"],
+      "description": "2D pixel art sprites for units, UI, and effects"
+    },
+    "animations": {
+      "type": "Animation Data",
+      "extensions": ["json", "txt"],
+      "projects": ["GDevelopAssistant", "DiabloGrudge-Server"],
+      "description": "Animation metadata and configs"
+    },
+    "audio": {
+      "type": "Audio",
+      "extensions": ["mp3", "wav", "ogg"],
+      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack"],
+      "description": "Sound effects and music"
+    }
+  },
+  "assets": {
+    "character-pack": {
+      "id": "char-pack-001",
+      "name": "Ultimate Character Pack",
+      "category": "models-3d",
+      "source": "GrudgeStudio/Assets/3d-models/characters",
+      "files": [
+        "Adventurer.glb",
+        "Animated Wizard.glb",
+        "Knight.glb",
+        "Ogre.glb",
+        "Skeleton.glb",
+        "Pirate Captain.glb"
+      ],
+      "projects": ["GDevelopAssistant", "DiabloGrudge-Server"],
+      "version": "1.0.0",
+      "description": "Animated 3D character models for game entities",
+      "compressed": false
+    },
+    "building-pack": {
+      "id": "buildings-001",
+      "name": "Buildings & Structures",
+      "category": "models-3d",
+      "source": "GrudgeStudio/Assets/3d-models/buildings",
+      "files": [
+        "House.glb",
+        "House (1).glb",
+        "Port.glb",
+        "Dock.glb",
+        "Forge Parts.glb"
+      ],
+      "projects": ["GDevelopAssistant"],
+      "version": "1.0.0",
+      "description": "Building and structure models for map features",
+      "compressed": false
+    },
+    "hero-sprites": {
+      "id": "sprites-heroes-001",
+      "name": "Hero Unit Sprites",
+      "category": "sprites",
+      "source": "GrudgeStudio/Assets/sprites/hero-units",
+      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack"],
+      "version": "1.0.0",
+      "description": "Procedurally generated 2D sprites for 20 hero units across 3 factions",
+      "animationStates": ["Idle", "Walk", "Attack01", "Attack02", "Death", "Hurt"],
+      "factions": {
+        "fabled": { "name": "Fabled", "color": "#22c55e", "units": 7 },
+        "legion": { "name": "Legion", "color": "#dc2626", "units": 7 },
+        "crusade": { "name": "Crusade", "color": "#3b82f6", "units": 6 }
+      },
+      "totalSprites": 285,
+      "compressed": false
+    },
+    "faction-emblems": {
+      "id": "ui-emblems-001",
+      "name": "Faction Emblems",
+      "category": "sprites",
+      "source": "GrudgeStudio/Assets/sprites/ui",
+      "files": [
+        "crusade-emblem.png",
+        "fabled-emblem.png",
+        "legion-emblem.png"
+      ],
+      "projects": ["GDevelopAssistant", "Warlord-Crafting-Suite"],
+      "version": "1.0.0",
+      "description": "UI emblems for faction identification",
+      "compressed": false
+    }
+  },
+  "deploymentConfig": {
+    "strategy": "google-drive-to-vercel",
+    "assetOutputPath": "client/public/assets",
+    "assetManifestPath": "client/public/assets-manifest.json",
+    "buildSteps": [
+      "npm run asset:sync",
+      "npm run asset:manifest",
+      "vite build"
+    ],
+    "compressionEnabled": false,
+    "cacheBusting": "version-based"
+  },
+  "guidelines": {
+    "fileNaming": "Use kebab-case for filenames (e.g., 'hero-unit-idle-01.png')",
+    "folderOrganization": "Organize by asset type and project usage",
+    "versionTracking": "Update version field when assets change",
+    "documentation": "Include description for each asset group"
+  }
+}

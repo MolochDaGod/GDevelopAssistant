@@ -1,45 +1,33 @@
-# Dependencies
-node_modules/
-package-lock.json
-
-# Environment variables
-.env
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Build output
-dist/
-build/
-*.tsbuildinfo
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
+node_modules
+dist
 .DS_Store
-Thumbs.db
+server/public
+vite.config.ts.*
+*.tar.gz
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Large asset directories - excluded from deployment
+attached_assets
+public/assets
+public/grudge-warlords
+public/grudge-drive
+public/games
+client/public/assets
 
-# Docker
-docker-compose.override.yml
+# Documentation and development files
+# Keep docs, ignore only large binaries if any
+!docs/
+extensions
+scripts
+*.md
+!replit.md
+.env*.local
+attached_assets/
+public/assets/
+client/public/assets/
 
-# Kubernetes secrets
-deploy/kubernetes/secrets/
-*.secret.yaml
+# Allow required build scripts and CI configs
+!scripts/asset-sync.js
+!scripts/google-drive-sync.js
+!.github/
+
+.vercel
