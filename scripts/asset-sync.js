@@ -123,7 +123,15 @@ function getSubcategoryPath(filePath, sourceDir) {
     return slug || 'default';
   }
 
-  // 2) Extract meaningful subcategory (first folder after known patterns)
+  // 2) Special-case legacy GrudgeRPGAssets2d -> grudge-swarm/sprites/characters/{rest}
+  const grudgeIdx = parts.indexOf('GrudgeRPGAssets2d');
+  if (grudgeIdx >= 0) {
+    const rest = parts.slice(grudgeIdx + 1).join(path.sep); // e.g., Archer/Archer
+    const mapped = path.join('grudge-swarm', 'sprites', 'characters', rest);
+    return mapped || 'grudge-swarm/sprites/characters';
+  }
+
+  // 3) Extract meaningful subcategory (first folder after known patterns)
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (

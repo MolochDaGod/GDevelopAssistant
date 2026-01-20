@@ -1,0 +1,110 @@
+{
+  "version": "1.0.0",
+  "description": "Character sprite configuration with animations, effects, and projectiles",
+  "characters": {
+    "archer": {
+      "name": "Archer",
+      "folderName": "Archer",
+      "basePath": "sprites/characters/Archer",
+      "animations": {
+        "idle": { "frames": 1, "frameDuration": 0.1 },
+        "walk": { "frames": 3, "frameDuration": 0.15 },
+        "attack01": { "frames": 3, "frameDuration": 0.1 },
+        "attack02": { "frames": 3, "frameDuration": 0.1 },
+        "hurt": { "frames": 1, "frameDuration": 0.1 },
+        "death": { "frames": 1, "frameDuration": 0.1 }
+      },
+      "effects": [
+        {
+          "id": "attack-aura",
+          "folderPath": "sprites/characters/Archer/(Split%20Effects)",
+          "animations": {
+            "idle": 1,
+            "active": 4,
+            "burst": 6
+          }
+        }
+      ],
+      "projectiles": [
+        {
+          "id": "arrow",
+          "folderPath": "sprites/characters/Archer/(projectile)",
+          "animations": {
+            "travel": 4,
+            "impact": 3
+          }
+        }
+      ]
+    },
+    "knight": {
+      "name": "Knight",
+      "folderName": "Knight",
+      "basePath": "sprites/characters/Knight",
+      "animations": {
+        "idle": { "frames": 1, "frameDuration": 0.1 },
+        "walk": { "frames": 3, "frameDuration": 0.15 },
+        "attack01": { "frames": 3, "frameDuration": 0.1 },
+        "attack02": { "frames": 3, "frameDuration": 0.1 },
+        "hurt": { "frames": 1, "frameDuration": 0.1 },
+        "death": { "frames": 1, "frameDuration": 0.1 }
+      },
+      "effects": [],
+      "projectiles": []
+    },
+    "mage": {
+      "name": "Mage",
+      "folderName": "Mage",
+      "basePath": "sprites/characters/Mage",
+      "animations": {
+        "idle": { "frames": 1, "frameDuration": 0.1 },
+        "walk": { "frames": 3, "frameDuration": 0.15 },
+        "attack01": { "frames": 4, "frameDuration": 0.12 },
+        "attack02": { "frames": 4, "frameDuration": 0.12 },
+        "hurt": { "frames": 1, "frameDuration": 0.1 },
+        "death": { "frames": 1, "frameDuration": 0.1 }
+      },
+      "effects": [
+        {
+          "id": "spell-cast",
+          "folderPath": "sprites/characters/Mage/(Split%20Effects)",
+          "animations": {
+            "channel": 6,
+            "release": 4
+          }
+        }
+      ],
+      "projectiles": [
+        {
+          "id": "fireball",
+          "folderPath": "sprites/characters/Mage/(projectile)",
+          "animations": {
+            "travel": 6,
+            "impact": 5
+          }
+        }
+      ]
+    },
+    "wizard": {
+      "name": "Wizard",
+      "folderName": "Wizard",
+      "basePath": "sprites/characters/Wizard",
+      "animations": {
+        "idle": { "frames": 1, "frameDuration": 0.1 },
+        "walk": { "frames": 3, "frameDuration": 0.15 },
+        "attack01": { "frames": 4, "frameDuration": 0.12 },
+        "attack02": { "frames": 4, "frameDuration": 0.12 },
+        "hurt": { "frames": 1, "frameDuration": 0.1 },
+        "death": { "frames": 1, "frameDuration": 0.1 }
+      },
+      "effects": [],
+      "projectiles": []
+    }
+  },
+  "notes": [
+    "Animation frame counts should match your actual sprite sheets",
+    "Effects folder should be named '(Split Effects)' in the character directory",
+    "Projectile folder should be named '(projectile)' in the character directory",
+    "Spaces in folder names are URL-encoded as %20",
+    "frameDuration values are in seconds"
+  ]
+}

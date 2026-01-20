@@ -17,6 +17,22 @@ export interface UnitSprite {
   animationTime: number;
 }
 
+export interface EffectSprite {
+  id: string;
+  animations: Map<string, SpriteAnimation>;
+  currentAnimation: string;
+  currentFrame: number;
+  animationTime: number;
+}
+
+export interface ProjectileSprite {
+  id: string;
+  animations: Map<string, SpriteAnimation>;
+  currentAnimation: string;
+  currentFrame: number;
+  animationTime: number;
+}
+
 export interface SpriteLoadResult {
   success: boolean;
   error?: string;
@@ -187,6 +203,133 @@ class SpriteLoader {
   }
 
   /**
+   * Load effect sprite from (Split Effects) subfolder
+   */
+  async loadEffectSprite(effectId: string, characterPath: string, animationFrames: Record<string, number>): Promise<SpriteLoadResult> {
+    try {
+      const effectSprite: EffectSprite = {
+        id: effectId,
+        animations: new Map(),
+        currentAnimation: Object.keys(animationFrames)[0] || 'default',
+        currentFrame: 0,
+        animationTime: 0,
+      };
+
+      // Map character path to effect folder: 
+      // e.g., sprites/characters/Archer -> sprites/characters/Archer/(Split Effects)/
+      const effectBase = `${characterPath}/(Split%20Effects)/${effectId}`;
+
+      // Load each animation from effect frames
+      for (const [animName, frameCount] of Object.entries(animationFrames)) {
+        const candidates = [
+          `${effectBase}-${animName}.png`,
+          `${effectBase}.png`,
+        ];
+
+        let loadedImg: HTMLImageElement | null = null;
+        for (const candidate of candidates) {
+          try {
+            loadedImg = await this.loadImage(candidate);
+            break;
+          } catch (err) {
+            // Continue to next candidate
+          }
+        }
+
+        if (loadedImg) {
+          effectSprite.animations.set(animName, {
+            frames: [loadedImg],
+            frameDuration: 0.05, // Effects typically animate faster
+            loop: false,
+          });
+        } else {
+          console.warn(`Could not load effect animation ${animName} for ${effectId}`);
+        }
+      }
+
+      if (effectSprite.animations.size === 0) {
+        return {
+          success: false,
+          error: `No effect animations loaded for ${effectId}`,
+        };
+      }
+
+      return {
+        success: true,
+        sprite: effectSprite as any,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Load projectile sprite from (projectile) subfolder
+   */
+  async loadProjectileSprite(projectileId: string, characterPath: string, animationFrames: Record<string, number>): Promise<SpriteLoadResult> {
+    try {
+      const projectileSprite: ProjectileSprite = {
+        id: projectileId,
+        animations: new Map(),
+        currentAnimation: Object.keys(animationFrames)[0] || 'default',
+        currentFrame: 0,
+        animationTime: 0,
+      };
+
+      // Map character path to projectile folder:
+      // e.g., sprites/characters/Archer -> sprites/characters/Archer/(projectile)/
+      const projectileBase = `${characterPath}/(projectile)/${projectileId}`;
+
+      for (const [animName, frameCount] of Object.entries(animationFrames)) {
+        const candidates = [
+          `${projectileBase}-${animName}.png`,
+          `${projectileBase}.png`,
+        ];
+
+        let loadedImg: HTMLImageElement | null = null;
+        for (const candidate of candidates) {
+          try {
+            loadedImg = await this.loadImage(candidate);
+            break;
+          } catch (err) {
+            // Continue to next candidate
+          }
+        }
+
+        if (loadedImg) {
+          projectileSprite.animations.set(animName, {
+            frames: [loadedImg],
+            frameDuration: 0.05,
+            loop: true,
+          });
+        } else {
+          console.warn(`Could not load projectile animation ${animName} for ${projectileId}`);
+        }
+      }
+
+      if (projectileSprite.animations.size === 0) {
+        return {
+          success: false,
+          error: `No projectile animations loaded for ${projectileId}`,
+        };
+      }
+
+      return {
+        success: true,
+        sprite: projectileSprite as any,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Clear all cached sprites
    */
   clearCache() {
@@ -239,6 +382,142 @@ export function renderUnitSprite(
   );
 
   ctx.restore();
+}
+
+/**
+ * Render an effect sprite overlay on canvas
+ */
+export function renderEffectSprite(
+  ctx: CanvasRenderingContext2D,
+  sprite: EffectSprite,
+  x: number,
+  y: number,
+  size: number,
+  flipX: boolean = false
+) {
+  const anim = sprite.animations.get(sprite.currentAnimation);
+  if (!anim || anim.frames.length === 0) return;
+
+  const frame = anim.frames[Math.min(sprite.currentFrame, anim.frames.length - 1)];
+
+  ctx.save();
+  ctx.translate(x, y);
+  
+  if (flipX) {
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(
+    frame,
+    -size / 2,
+    -size / 2,
+    size,
+    size
+  );
+
+  ctx.restore();
+}
+
+/**
+ * Render a projectile sprite overlay on canvas
+ */
+export function renderProjectileSprite(
+  ctx: CanvasRenderingContext2D,
+  sprite: ProjectileSprite,
+  x: number,
+  y: number,
+  size: number,
+  flipX: boolean = false
+) {
+  const anim = sprite.animations.get(sprite.currentAnimation);
+  if (!anim || anim.frames.length === 0) return;
+
+  const frame = anim.frames[Math.min(sprite.currentFrame, anim.frames.length - 1)];
+
+  ctx.save();
+  ctx.translate(x, y);
+  
+  if (flipX) {
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(
+    frame,
+    -size / 2,
+    -size / 2,
+    size,
+    size
+  );
+
+  ctx.restore();
+}
+
+/**
+ * Render a unit with effect overlay
+ */
+export function renderUnitWithEffect(
+  ctx: CanvasRenderingContext2D,
+  unitSprite: UnitSprite,
+  effectSprite: EffectSprite | null,
+  x: number,
+  y: number,
+  size: number,
+  flipX: boolean = false
+) {
+  renderUnitSprite(ctx, unitSprite, x, y, size, flipX);
+  if (effectSprite) {
+    renderEffectSprite(ctx, effectSprite, x, y, size, flipX);
+  }
+}
+
+/**
+ * Render a unit with projectile overlay
+ */
+export function renderUnitWithProjectile(
+  ctx: CanvasRenderingContext2D,
+  unitSprite: UnitSprite,
+  projectileSprite: ProjectileSprite | null,
+  x: number,
+  y: number,
+  size: number,
+  flipX: boolean = false
+) {
+  renderUnitSprite(ctx, unitSprite, x, y, size, flipX);
+  if (projectileSprite) {
+    renderProjectileSprite(ctx, projectileSprite, x, y, size, flipX);
+  }
+}
+
+/**
+ * Update animation state with synchronized effect/projectile overlays
+ */
+export function updateAnimationWithOverlays(
+  unitSprite: UnitSprite,
+  effectSprite: EffectSprite | null,
+  projectileSprite: ProjectileSprite | null,
+  deltaTime: number
+) {
+  spriteLoader.updateAnimation(unitSprite, deltaTime);
+  if (effectSprite) {
+    spriteLoader.updateAnimation(effectSprite as any, deltaTime);
+  }
+  if (projectileSprite) {
+    spriteLoader.updateAnimation(projectileSprite as any, deltaTime);
+  }
+}
+
+/**
+ * Change animation on unit and optionally sync overlays
+ */
+export function setAnimationWithOverlays(
+  unitSprite: UnitSprite,
+  effectSprite: EffectSprite | null,
+  projectileSprite: ProjectileSprite | null,
+  animationName: string
+) {
+  spriteLoader.setAnimation(unitSprite, animationName);
+  // Effects and projectiles typically have their own animation names
+  // but you can sync them here if needed
 }
 
 /**
