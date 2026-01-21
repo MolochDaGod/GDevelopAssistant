@@ -290,6 +290,9 @@ export default function SwarmRTSEnhanced() {
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<Vector2>({ x: 0, y: 0 });
   const spritesRef = useRef<Map<string, UnitSprite>>(new Map());
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<Vector2>({ x: 0, y: 0 });
+  const cameraPanStartRef = useRef<Vector2>({ x: 0, y: 0 });
 
   // Load all unit sprites and game data from API
   const loadSprites = useCallback(async () => {
@@ -1018,6 +1021,20 @@ export default function SwarmRTSEnhanced() {
       ctx.restore();
     });
     
+    // Render selection box
+    if (state.selection) {
+      const x1 = Math.min(state.selection.x1, state.selection.x2);
+      const y1 = Math.min(state.selection.y1, state.selection.y2);
+      const x2 = Math.max(state.selection.x1, state.selection.x2);
+      const y2 = Math.max(state.selection.y1, state.selection.y2);
+      
+      ctx.strokeStyle = '#0F0';
+      ctx.lineWidth = 2;
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+      ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    }
+    
     // Render fog of war
     if (state.fogOfWar) {
       fogCtx.clearRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
@@ -1101,6 +1118,125 @@ export default function SwarmRTSEnhanced() {
     setDisplayState(prev => ({ ...prev, fogOfWar: !prev.fogOfWar }));
   };
 
+  // Mouse event handlers
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const state = gameStateRef.current;
+
+    if (e.button === 0) { // Left click - selection
+      isDraggingRef.current = true;
+      dragStartRef.current = { x, y };
+      state.selection = { x1: x, y1: y, x2: x, y2: y };
+    } else if (e.button === 2) { // Right click - handled in context menu
+      e.preventDefault();
+    } else if (e.button === 1) { // Middle mouse - pan camera
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      cameraPanStartRef.current = { x: state.camera.x, y: state.camera.y };
+    }
+  }, []);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const state = gameStateRef.current;
+
+    if (isDraggingRef.current && state.selection) {
+      state.selection.x2 = x;
+      state.selection.y2 = y;
+    }
+
+    if (isPanningRef.current) {
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      state.camera.x = Math.max(0, Math.min(GAME_WIDTH - VIEWPORT_WIDTH, cameraPanStartRef.current.x - dx));
+      state.camera.y = Math.max(0, Math.min(GAME_HEIGHT - VIEWPORT_HEIGHT, cameraPanStartRef.current.y - dy));
+    }
+  }, []);
+
+  const handleCanvasMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const state = gameStateRef.current;
+
+    if (e.button === 0 && isDraggingRef.current) {
+      isDraggingRef.current = false;
+      
+      const worldX = x + state.camera.x;
+      const worldY = y + state.camera.y;
+      
+      // Check if it's a click (small drag distance) or a selection box
+      const dragDist = distance(dragStartRef.current.x, dragStartRef.current.y, x, y);
+      
+      if (dragDist < 5) {
+        // Single click - select one unit
+        let foundUnit: Unit | null = null;
+        let minDist = 50; // Max click radius
+        
+        state.units.forEach(unit => {
+          if (!unit.isDestroyed && unit.faction === state.playerFaction) {
+            const d = distance(unit.x, unit.y, worldX, worldY);
+            if (d < minDist) {
+              minDist = d;
+              foundUnit = unit;
+            }
+          }
+        });
+        
+        state.selectedUnits.clear();
+        if (foundUnit) {
+          state.selectedUnits.add(foundUnit.id);
+        }
+      } else {
+        // Selection box
+        const x1 = Math.min(dragStartRef.current.x, x) + state.camera.x;
+        const x2 = Math.max(dragStartRef.current.x, x) + state.camera.x;
+        const y1 = Math.min(dragStartRef.current.y, y) + state.camera.y;
+        const y2 = Math.max(dragStartRef.current.y, y) + state.camera.y;
+        
+        state.selectedUnits.clear();
+        state.units.forEach(unit => {
+          if (!unit.isDestroyed && unit.faction === state.playerFaction) {
+            if (unit.x >= x1 && unit.x <= x2 && unit.y >= y1 && unit.y <= y2) {
+              state.selectedUnits.add(unit.id);
+            }
+          }
+        });
+      }
+      
+      state.selection = null;
+    } else if (e.button === 1) {
+      isPanningRef.current = false;
+    }
+  }, []);
+
+  const handleCanvasContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const state = gameStateRef.current;
+    
+    if (state.selectedUnits.size === 0) return;
+    
+    const worldX = x + state.camera.x;
+    const worldY = y + state.camera.y;
+    
+    // Move all selected units to target position
+    state.units.forEach(unit => {
+      if (state.selectedUnits.has(unit.id)) {
+        unit.destX = worldX + (Math.random() - 0.5) * 100; // Spread units out
+        unit.destY = worldY + (Math.random() - 0.5) * 100;
+        unit.command = 'move';
+      }
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-black flex flex-col items-center p-4">
       <div className="flex items-center gap-4 mb-4">
@@ -1175,7 +1311,16 @@ export default function SwarmRTSEnhanced() {
         <div className="flex gap-4">
           <div className="relative">
             <canvas ref={bgCanvasRef} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} className="absolute" />
-            <canvas ref={canvasRef} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} className="relative border border-gray-800" />
+            <canvas 
+              ref={canvasRef} 
+              width={VIEWPORT_WIDTH} 
+              height={VIEWPORT_HEIGHT} 
+              className="relative border border-gray-800 cursor-crosshair" 
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onContextMenu={handleCanvasContextMenu}
+            />
             <canvas ref={fogCanvasRef} width={VIEWPORT_WIDTH} height={VIEWPORT_HEIGHT} className="absolute pointer-events-none" />
             
             {/* Minimap */}

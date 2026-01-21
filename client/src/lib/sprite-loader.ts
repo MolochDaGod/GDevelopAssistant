@@ -99,19 +99,31 @@ class SpriteLoader {
 
       // Normalize path from historical locations to current /assets layout
       // Examples input: 'docs/MiniWorldSprites/Characters/Heros/GrudgeRPGAssets2d/Archer'
-      // Target primary:  'sprites/default/Archer-<Anim>.png' (fast path given current sync)
-      // Target fallback: 'sprites/Characters/Heros/GrudgeRPGAssets2d/Archer-<Anim>.png'
-      const leafName = spritePath.split(/[\\/]/).pop() || spritePath;
+      // Primary attempt:  'sprites/default/Archer-<Anim>.png'
+      // Secondary:       'sprites/Characters/Heros/GrudgeRPGAssets2d/Archer-<Anim>.png'
+      // Fallbacks:       single-sheet PNGs such as
+      //                  'sprites/characters/Archer.png', 'sprites/Characters/Archer.png',
+      //                  'sprites/grudge-swarm/characters/Archer.png'
+      const leafName = (spritePath.split(/[\\/]/).pop() || spritePath).replace(/\.(png|webp)$/i, '');
       let stripped = spritePath.replace(/^docs\//i, '');
       stripped = stripped.replace(/^MiniWorldSprites\//i, '');
       const structuredBase = `sprites/${stripped}`; // e.g., sprites/Characters/Heros/.../Archer
       const defaultBase = `sprites/default/${leafName}`; // e.g., sprites/default/Archer
 
-      // Load each animation's image with fallback resolution
-      for (const animName of animations) {
+      // Pre-build single-sheet fallbacks (case variants)
+      const singleSheetFallbacks = [
+        `sprites/characters/${leafName}.png`,
+        `sprites/Characters/${leafName}.png`,
+        `sprites/grudge-swarm/characters/${leafName}.png`,
+      ];
+
+      // Try to load each animation as its own file; otherwise fall back to single-sheet
+      for (const anim of animations) {
+        const animName = anim; // keep original case
         const candidates = [
           `${defaultBase}-${animName}.png`,
           `${structuredBase}-${animName}.png`,
+          ...singleSheetFallbacks,
         ];
 
         let loadedImg: HTMLImageElement | null = null;
@@ -128,11 +140,29 @@ class SpriteLoader {
         if (loadedImg) {
           unitSprite.animations.set(animName, {
             frames: [loadedImg],
-            frameDuration: 0.1,
-            loop: animName !== 'Death' && animName !== 'Hurt',
+            frameDuration: /attack/i.test(animName) ? 0.08 : /walk/i.test(animName) ? 0.12 : 0.1,
+            loop: !/death|hurt/i.test(animName),
           });
         } else {
           console.warn(`Could not load animation ${animName} for ${unitId}. Tried:`, candidates, lastErr);
+        }
+      }
+
+      // If still nothing loaded, try a final generic fallback by leaf name only once
+      if (unitSprite.animations.size === 0) {
+        for (const candidate of singleSheetFallbacks) {
+          try {
+            const img = await this.loadImage(candidate);
+            // Map the same image to all provided animations so rendering works
+            for (const anim of animations) {
+              unitSprite.animations.set(anim, {
+                frames: [img],
+                frameDuration: 0.1,
+                loop: !/death|hurt/i.test(anim),
+              });
+            }
+            break;
+          } catch (_) {}
         }
       }
 
