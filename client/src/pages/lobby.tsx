@@ -1,0 +1,682 @@
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'wouter';
+import { io, Socket } from 'socket.io-client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Users, 
+  Crown, 
+  Gamepad2, 
+  MessageSquare, 
+  Plus, 
+  Play, 
+  Lock, 
+  Send,
+  UserPlus,
+  LogIn,
+  Check,
+  X,
+  Swords,
+  Castle,
+  ArrowLeft,
+  RefreshCw
+} from 'lucide-react';
+
+interface Player {
+  id: string;
+  sessionId: string;
+  username: string;
+  isReady: boolean;
+  isHost: boolean;
+  joinedAt: string;
+}
+
+interface GameRoom {
+  id: string;
+  name: string;
+  gameType: 'crown-clash' | 'rts-battle' | 'custom';
+  hostId: string;
+  players: Player[];
+  maxPlayers: number;
+  isPrivate: boolean;
+  status: 'waiting' | 'starting' | 'in-progress' | 'finished';
+  settings: Record<string, any>;
+  createdAt: string;
+}
+
+interface LobbyMessage {
+  id: string;
+  playerId: string;
+  username: string;
+  content: string;
+  timestamp: string;
+}
+
+const GAME_TYPE_INFO = {
+  'crown-clash': { 
+    name: 'Crown Clash', 
+    icon: Crown, 
+    description: 'Card battle arena game',
+    color: 'text-yellow-500'
+  },
+  'rts-battle': { 
+    name: 'RTS Battle', 
+    icon: Castle, 
+    description: 'Real-time strategy warfare',
+    color: 'text-blue-500'
+  },
+  'custom': { 
+    name: 'Custom Game', 
+    icon: Gamepad2, 
+    description: 'Custom game mode',
+    color: 'text-purple-500'
+  },
+};
+
+export default function LobbyPage() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [username, setUsername] = useState('');
+  const [rooms, setRooms] = useState<GameRoom[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null);
+  const [lobbyMessages, setLobbyMessages] = useState<LobbyMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<GameRoom | null>(null);
+  const [joinPassword, setJoinPassword] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [newRoom, setNewRoom] = useState({
+    name: '',
+    gameType: 'crown-clash' as 'crown-clash' | 'rts-battle' | 'custom',
+    maxPlayers: 4,
+    isPrivate: false,
+    password: '',
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['/api/lobby/stats'],
+    refetchInterval: 10000,
+  });
+
+  useEffect(() => {
+    if (user?.username) {
+      setUsername(user.username);
+    } else {
+      const stored = localStorage.getItem('lobby-username');
+      if (stored) {
+        setUsername(stored);
+      } else {
+        setUsername(`Player${Math.floor(Math.random() * 10000)}`);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socketUrl = `${protocol}//${window.location.host}`;
+    
+    const newSocket = io(socketUrl, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to lobby server');
+      setConnected(true);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from lobby server');
+      setConnected(false);
+    });
+
+    newSocket.on('lobby:rooms', (roomList: GameRoom[]) => {
+      setRooms(roomList);
+    });
+
+    newSocket.on('lobby:messages', (messages: LobbyMessage[]) => {
+      setLobbyMessages(messages);
+    });
+
+    newSocket.on('lobby:message', (message: LobbyMessage) => {
+      setLobbyMessages(prev => [...prev, message]);
+    });
+
+    newSocket.on('room:created', (room: GameRoom) => {
+      setCurrentRoom(room);
+      setShowCreateDialog(false);
+      toast({ title: 'Room created!', description: `Room "${room.name}" is ready` });
+    });
+
+    newSocket.on('room:joined', (room: GameRoom) => {
+      setCurrentRoom(room);
+      setShowJoinDialog(false);
+      setJoinPassword('');
+      toast({ title: 'Joined room!', description: `Welcome to "${room.name}"` });
+    });
+
+    newSocket.on('room:updated', (room: GameRoom) => {
+      setCurrentRoom(room);
+    });
+
+    newSocket.on('room:player-joined', ({ room, player }: { room: GameRoom; player: Player }) => {
+      setCurrentRoom(room);
+      toast({ title: 'Player joined', description: `${player.username} joined the room` });
+    });
+
+    newSocket.on('room:player-left', ({ playerId }: { playerId: string }) => {
+      toast({ title: 'Player left', description: 'A player has left the room' });
+    });
+
+    newSocket.on('room:kicked', () => {
+      setCurrentRoom(null);
+      toast({ title: 'Kicked', description: 'You were kicked from the room', variant: 'destructive' });
+    });
+
+    newSocket.on('room:starting', (room: GameRoom) => {
+      setCurrentRoom(room);
+      toast({ title: 'Game starting!', description: 'Get ready...' });
+    });
+
+    newSocket.on('game:start', (data: any) => {
+      toast({ title: 'Game started!', description: `Starting ${data.gameType}...` });
+      if (data.gameType === 'crown-clash') {
+        window.location.href = '/crown-clash';
+      } else if (data.gameType === 'rts-battle') {
+        window.location.href = '/rts-builder';
+      }
+    });
+
+    newSocket.on('room:error', ({ message }: { message: string }) => {
+      toast({ title: 'Error', description: message, variant: 'destructive' });
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [lobbyMessages]);
+
+  useEffect(() => {
+    if (username && !user?.username) {
+      localStorage.setItem('lobby-username', username);
+    }
+  }, [username, user]);
+
+  const handleCreateRoom = () => {
+    if (!socket || !newRoom.name.trim()) return;
+    
+    socket.emit('room:create', {
+      ...newRoom,
+      username,
+    });
+  };
+
+  const handleJoinRoom = (room: GameRoom) => {
+    if (room.isPrivate) {
+      setSelectedRoom(room);
+      setShowJoinDialog(true);
+    } else {
+      socket?.emit('room:join', { roomId: room.id, username });
+    }
+  };
+
+  const confirmJoinRoom = () => {
+    if (!socket || !selectedRoom) return;
+    socket.emit('room:join', { 
+      roomId: selectedRoom.id, 
+      username, 
+      password: joinPassword 
+    });
+  };
+
+  const handleLeaveRoom = () => {
+    socket?.emit('room:leave');
+    setCurrentRoom(null);
+  };
+
+  const handleReady = () => {
+    if (!currentRoom) return;
+    const me = currentRoom.players.find(p => p.sessionId === socket?.id);
+    socket?.emit('room:ready', !me?.isReady);
+  };
+
+  const handleStartGame = () => {
+    socket?.emit('room:start');
+  };
+
+  const handleKick = (playerId: string) => {
+    socket?.emit('room:kick', playerId);
+  };
+
+  const handleSendChat = () => {
+    if (!socket || !chatInput.trim()) return;
+    socket.emit('lobby:chat', { username, content: chatInput.trim() });
+    setChatInput('');
+  };
+
+  const isHost = currentRoom?.hostId === socket?.id;
+  const myPlayer = currentRoom?.players.find(p => p.sessionId === socket?.id);
+  const allReady = currentRoom?.players.every(p => p.isReady || p.isHost) && (currentRoom?.players.length || 0) >= 2;
+
+  if (!isAuthenticated && !authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+        <div className="text-center space-y-2">
+          <Swords className="w-16 h-16 mx-auto text-red-600 mb-4" />
+          <h2 className="text-2xl font-bold">Join the Battle</h2>
+          <p className="text-muted-foreground">Sign in to create or join multiplayer game lobbies</p>
+        </div>
+        <Button asChild data-testid="button-login">
+          <a href="/api/login">
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign In
+          </a>
+        </Button>
+      </div>
+    );
+  }
+
+  if (currentRoom) {
+    const GameIcon = GAME_TYPE_INFO[currentRoom.gameType].icon;
+    
+    return (
+      <div className="min-h-full bg-background p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={handleLeaveRoom} data-testid="button-leave-room">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Leave Room
+            </Button>
+            <Badge variant={currentRoom.status === 'waiting' ? 'secondary' : 'default'}>
+              {currentRoom.status}
+            </Badge>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <GameIcon className={`w-8 h-8 ${GAME_TYPE_INFO[currentRoom.gameType].color}`} />
+                <div>
+                  <CardTitle data-testid="text-room-name">{currentRoom.name}</CardTitle>
+                  <CardDescription>
+                    {GAME_TYPE_INFO[currentRoom.gameType].name} - {currentRoom.players.length}/{currentRoom.maxPlayers} players
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Players
+                </h3>
+                {currentRoom.players.map((player) => (
+                  <div 
+                    key={player.sessionId}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    data-testid={`player-row-${player.sessionId}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {player.isHost && <Crown className="w-4 h-4 text-yellow-500" />}
+                      <span className="font-medium">{player.username}</span>
+                      {player.sessionId === socket?.id && (
+                        <Badge variant="outline" className="text-xs">You</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {player.isReady ? (
+                        <Badge className="bg-green-600">
+                          <Check className="w-3 h-3 mr-1" /> Ready
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          <X className="w-3 h-3 mr-1" /> Not Ready
+                        </Badge>
+                      )}
+                      {isHost && player.sessionId !== socket?.id && (
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleKick(player.sessionId)}
+                          data-testid={`button-kick-${player.sessionId}`}
+                        >
+                          Kick
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                {!isHost && (
+                  <Button 
+                    variant={myPlayer?.isReady ? "secondary" : "default"}
+                    onClick={handleReady}
+                    data-testid="button-ready"
+                  >
+                    {myPlayer?.isReady ? 'Cancel Ready' : 'Ready Up'}
+                  </Button>
+                )}
+                {isHost && (
+                  <Button 
+                    onClick={handleStartGame}
+                    disabled={!allReady}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="button-start-game"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Start Game
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-full">
+      <div className="border-b bg-card px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2" data-testid="text-lobby-title">
+              <Swords className="w-6 h-6 text-red-600" />
+              Multiplayer Lobby
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {connected ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  Connected as {username}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  Connecting...
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => socket?.emit('lobby:refresh')} data-testid="button-refresh-lobbies">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-room">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Room
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Game Room</DialogTitle>
+                  <DialogDescription>
+                    Set up a new multiplayer game room
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="room-name">Room Name</Label>
+                    <Input
+                      id="room-name"
+                      value={newRoom.name}
+                      onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
+                      placeholder="My Awesome Game"
+                      data-testid="input-room-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="game-type">Game Type</Label>
+                    <Select
+                      value={newRoom.gameType}
+                      onValueChange={(value: any) => setNewRoom({ ...newRoom, gameType: value })}
+                    >
+                      <SelectTrigger data-testid="select-game-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="crown-clash">Crown Clash - Card Battle</SelectItem>
+                        <SelectItem value="rts-battle">RTS Battle - Strategy</SelectItem>
+                        <SelectItem value="custom">Custom Game</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="max-players">Max Players</Label>
+                    <Select
+                      value={String(newRoom.maxPlayers)}
+                      onValueChange={(value) => setNewRoom({ ...newRoom, maxPlayers: parseInt(value) })}
+                    >
+                      <SelectTrigger data-testid="select-max-players">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2 Players</SelectItem>
+                        <SelectItem value="4">4 Players</SelectItem>
+                        <SelectItem value="6">6 Players</SelectItem>
+                        <SelectItem value="8">8 Players</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="private">Private Room</Label>
+                    <Switch
+                      id="private"
+                      checked={newRoom.isPrivate}
+                      onCheckedChange={(checked) => setNewRoom({ ...newRoom, isPrivate: checked })}
+                      data-testid="switch-private"
+                    />
+                  </div>
+                  {newRoom.isPrivate && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newRoom.password}
+                        onChange={(e) => setNewRoom({ ...newRoom, password: e.target.value })}
+                        placeholder="Enter room password"
+                        data-testid="input-password"
+                      />
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateRoom} disabled={!newRoom.name.trim()} data-testid="button-confirm-create">
+                    Create Room
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 p-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Gamepad2 className="w-5 h-5" />
+              Available Rooms ({rooms.length})
+            </h2>
+
+            {rooms.length === 0 ? (
+              <Card className="p-12 text-center">
+                <div className="text-muted-foreground space-y-2">
+                  <Gamepad2 className="w-12 h-12 mx-auto opacity-50" />
+                  <p>No rooms available</p>
+                  <p className="text-sm">Create a room to start playing!</p>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                {rooms.map((room) => {
+                  const GameIcon = GAME_TYPE_INFO[room.gameType].icon;
+                  return (
+                    <Card 
+                      key={room.id} 
+                      className="hover-elevate cursor-pointer"
+                      onClick={() => handleJoinRoom(room)}
+                      data-testid={`card-lobby-${room.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2 rounded-lg bg-muted ${GAME_TYPE_INFO[room.gameType].color}`}>
+                              <GameIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">{room.name}</h3>
+                                {room.isPrivate && <Lock className="w-4 h-4 text-muted-foreground" />}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {GAME_TYPE_INFO[room.gameType].name}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="flex items-center gap-1">
+                                <Users className="w-4 h-4" />
+                                <span>{room.players.length}/{room.maxPlayers}</span>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {room.status}
+                              </Badge>
+                            </div>
+                            <Button size="sm" data-testid={`button-join-${room.id}`}>
+                              <UserPlus className="w-4 h-4 mr-1" />
+                              Join
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <Card className="h-[400px] flex flex-col">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Lobby Chat
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col gap-3 overflow-hidden">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-2">
+                    {lobbyMessages.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
+                    ) : (
+                      lobbyMessages.map((msg) => (
+                        <div key={msg.id} className="text-sm">
+                          <span className="font-medium text-primary">{msg.username}:</span>{' '}
+                          <span className="text-muted-foreground">{msg.content}</span>
+                        </div>
+                      ))
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                    data-testid="input-chat"
+                  />
+                  <Button size="icon" onClick={handleSendChat} data-testid="button-send-chat">
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Quick Play</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link href="/crown-clash">
+                  <Button variant="outline" className="w-full justify-start" data-testid="link-solo-crown-clash">
+                    <Crown className="w-4 h-4 mr-2 text-yellow-500" />
+                    Crown Clash (Solo vs AI)
+                  </Button>
+                </Link>
+                <Link href="/rts-builder">
+                  <Button variant="outline" className="w-full justify-start" data-testid="link-rts-builder">
+                    <Castle className="w-4 h-4 mr-2 text-blue-500" />
+                    RTS Builder
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join Private Room</DialogTitle>
+            <DialogDescription>
+              Enter the password to join "{selectedRoom?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="join-password">Password</Label>
+            <Input
+              id="join-password"
+              type="password"
+              value={joinPassword}
+              onChange={(e) => setJoinPassword(e.target.value)}
+              placeholder="Enter room password"
+              onKeyDown={(e) => e.key === 'Enter' && confirmJoinRoom()}
+              data-testid="input-join-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowJoinDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmJoinRoom} data-testid="button-confirm-join">
+              Join Room
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
