@@ -1,3 +1,19 @@
 {
-  "buildCommand": "npm run asset:drive:sync && npm run asset:sync && esbuild server/index.ts --platform=node --external:express --external:socket.io --bundle --format=esm --outdir=dist"
+  "version": 2,
+  "buildCommand": "npm run build:vercel",
+  "builds": [
+    {
+      "src": "src/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
