@@ -1492,31 +1492,10 @@ export default function MMOWorld() {
   const [spritesLoading, setSpritesLoading] = useState(true);
   const [spriteError, setSpriteError] = useState<string | null>(null);
 
-  // Load sprites from API
+  // Game uses procedurally generated textures - no sprite loading needed
   useEffect(() => {
-    const loadSprites = async () => {
-      try {
-        setSpritesLoading(true);
-        setSpriteError(null);
-        
-        // Fetch sprite data from backend
-        const sprites = await mmoApi.getSprites();
-        const animations = await mmoApi.getAnimations();
-        
-        if (sprites.length > 0) {
-          console.log('Loaded', sprites.length, 'sprites from API');
-          console.log('Loaded', animations.length, 'animations from API');
-        }
-      } catch (error) {
-        console.error('Failed to load sprites from API:', error);
-        setSpriteError('Failed to load game sprites');
-      } finally {
-        setSpritesLoading(false);
-        spritesLoadedRef.current = true;
-      }
-    };
-
-    loadSprites();
+    setSpritesLoading(false);
+    spritesLoadedRef.current = true;
   }, []);
 
   useEffect(() => {
@@ -1644,6 +1623,7 @@ export default function MMOWorld() {
             <div
               ref={containerRef}
               className="rounded-lg overflow-hidden border border-border"
+              style={{ width: '1100px', height: '700px' }}
               data-testid="game-container"
             />
             

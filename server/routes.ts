@@ -28,7 +28,7 @@ function parseObjectPath(path: string): { bucketName: string; objectName: string
   const objectName = pathParts.slice(2).join("/");
   return { bucketName, objectName };
 }
-import { isAuthenticated } from "./replitAuth";
+// Grudge auth is handled in grudgeAuth.ts
 import { lobbyManager } from "./multiplayer/lobby";
 import { overdriveEngine } from "./services/overdriveEngine";
 import { 
@@ -1472,33 +1472,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
-  // Authentication Routes
+  // Authentication Routes (now in grudgeAuth.ts)
   // ============================================
-
-  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
-    try {
-      const claims = (req.user as any)?.claims;
-      if (!claims?.sub) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const user = await storage.getUser(claims.sub);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
 
   // ============================================
   // Player Profile Routes
   // ============================================
 
-  app.get("/api/players/me", isAuthenticated, async (req, res) => {
+  app.get("/api/players/me", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1514,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/players/profile", isAuthenticated, async (req, res) => {
+  app.post("/api/players/profile", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       
@@ -1547,7 +1528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/players/me", isAuthenticated, async (req, res) => {
+  app.patch("/api/players/me", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1577,7 +1558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/players/me/characters", isAuthenticated, async (req, res) => {
+  app.get("/api/players/me/characters", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1593,7 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/players/me/characters/:characterId", isAuthenticated, async (req, res) => {
+  app.post("/api/players/me/characters/:characterId", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1632,7 +1613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/players/me/wallet", isAuthenticated, async (req, res) => {
+  app.get("/api/players/me/wallet", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1674,7 +1655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/players/me/achievements", isAuthenticated, async (req, res) => {
+  app.get("/api/players/me/achievements", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1717,7 +1698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/lobbies", isAuthenticated, async (req, res) => {
+  app.post("/api/lobbies", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1753,7 +1734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/lobbies/:id/join", isAuthenticated, async (req, res) => {
+  app.post("/api/lobbies/:id/join", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1789,7 +1770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/lobbies/:id/leave", isAuthenticated, async (req, res) => {
+  app.post("/api/lobbies/:id/leave", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1805,7 +1786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/lobbies/:id/player", isAuthenticated, async (req, res) => {
+  app.patch("/api/lobbies/:id/player", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1821,7 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/lobbies/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/lobbies/:id", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
@@ -1863,7 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User Settings Routes
   // ============================================
 
-  app.get("/api/settings", isAuthenticated, async (req, res) => {
+  app.get("/api/settings", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const settings = await storage.getUserSettings(claims.sub);
@@ -1873,7 +1854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/settings", isAuthenticated, async (req, res) => {
+  app.put("/api/settings", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const settings = await storage.upsertUserSettings({
@@ -2584,7 +2565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/viewport-assets/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/viewport-assets/:id", async (req, res) => {
     try {
       await storage.deleteViewportAsset(req.params.id);
       res.status(204).send();
@@ -2746,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/saved-characters/:id/activate", isAuthenticated, async (req, res) => {
+  app.patch("/api/saved-characters/:id/activate", async (req, res) => {
     try {
       const claims = (req.user as any)?.claims;
       const userId = claims?.sub;
@@ -2760,7 +2741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/saved-characters/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/saved-characters/:id", async (req, res) => {
     try {
       await storage.deleteSavedCharacter(req.params.id);
       res.status(204).send();

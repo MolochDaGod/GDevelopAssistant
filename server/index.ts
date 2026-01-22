@@ -5,7 +5,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
-import { setupAuth } from "./replitAuth";
+import { setupGrudgeAuth } from "./grudgeAuth";
 
 const app = express();
 
@@ -52,9 +52,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Set up authentication
-  await setupAuth(app);
-  log("Authentication configured");
+  // Set up Grudge authentication
+  setupGrudgeAuth(app);
+  log("Grudge Authentication configured");
 
   // Seed assets on startup (optional for local dev)
   try {
