@@ -62,38 +62,239 @@ export default function GrudgeDrive() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let carY = canvas.height / 2;
-    let speed = 5;
-    let roadOffset = 0;
+    let carX = canvas.width / 2 - 20;
+    let carY = canvas.height - 150;
+    let carSpeed = 0;
+    let maxSpeed = 15;
+    let acceleration = 0.3;
+    let rpm = 0;
+    let gear = 1;
+    let raceProgress = 0;
+    let opponentProgress = 0;
+    let opponentSpeed = 8 + Math.random() * 4;
+    let raceDistance = 400; // meters
+    let countdown = 3;
+    let countdownTimer = 0;
+    let raceStarted = false;
+    let raceFinished = false;
+    let keys: { [key: string]: boolean } = {};
+
+    // Houston map elements
+    const houstonLandmarks = [
+      { name: 'Downtown', y: 100 },
+      { name: 'Galleria', y: 200 },
+      { name: 'Medical Center', y: 300 },
+      { name: 'NASA', y: 400 },
+    ];
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+      if (e.key === 'Shift' && gear < 5) gear++;
+      if (e.key === 'Control' && gear > 1) gear--;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    const drawHoustonMap = (offset: number) => {
+      // Draw Houston street grid background
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw street grid
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 10; i++) {
+        const y = (i * 80 + offset) % canvas.height;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw landmarks
+      ctx.fillStyle = '#444';
+      ctx.font = '12px monospace';
+      houstonLandmarks.forEach(landmark => {
+        const y = (landmark.y + offset) % canvas.height;
+        if (y > 0 && y < canvas.height - 50) {
+          ctx.fillRect(20, y, 60, 40);
+          ctx.fillStyle = '#888';
+          ctx.fillText(landmark.name, 25, y + 25);
+          ctx.fillStyle = '#444';
+        }
+      });
+
+      // Main drag strip
+      const stripX = canvas.width / 2 - 120;
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillRect(stripX, 0, 240, canvas.height);
+
+      // Starting line
+      if (offset < 50) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(stripX, canvas.height - 120, 240, 8);
+      }
+
+      // Lane divider
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([20, 15]);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Finish line
+      const finishY = canvas.height - 150 - (raceDistance * 1.5);
+      if (finishY + offset > 0 && finishY + offset < canvas.height) {
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < 12; i++) {
+          ctx.fillStyle = i % 2 === 0 ? '#fff' : '#000';
+          ctx.fillRect(stripX + i * 20, finishY + offset, 20, 15);
+        }
+      }
+    };
+
+    const drawCar = (x: number, y: number, color: string) => {
+      // Car body
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 40, 70);
+      
+      // Windshield
+      ctx.fillStyle = '#00ccff';
+      ctx.fillRect(x + 5, y + 10, 30, 20);
+      
+      // Wheels
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - 5, y + 10, 8, 15);
+      ctx.fillRect(x + 37, y + 10, 8, 15);
+      ctx.fillRect(x - 5, y + 45, 8, 15);
+      ctx.fillRect(x + 37, y + 45, 8, 15);
+      
+      // Headlights
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(x + 5, y + 65, 10, 4);
+      ctx.fillRect(x + 25, y + 65, 10, 4);
+    };
+
+    const drawHUD = () => {
+      // Speed and RPM
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(10, 10, 200, 120);
+      
+      ctx.fillStyle = '#00ff00';
+      ctx.font = 'bold 24px monospace';
+      ctx.fillText(`${Math.floor(carSpeed * 10)} MPH`, 20, 40);
+      
+      ctx.font = '16px monospace';
+      ctx.fillText(`RPM: ${Math.floor(rpm)}`, 20, 65);
+      ctx.fillText(`GEAR: ${gear}`, 20, 85);
+      
+      // RPM bar
+      ctx.fillStyle = '#333';
+      ctx.fillRect(20, 95, 170, 20);
+      const rpmPercent = Math.min(rpm / 8000, 1);
+      ctx.fillStyle = rpmPercent > 0.8 ? '#ff0000' : '#00ff00';
+      ctx.fillRect(20, 95, 170 * rpmPercent, 20);
+      
+      // Distance
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(canvas.width - 210, 10, 200, 80);
+      ctx.fillStyle = '#fff';
+      ctx.font = '18px monospace';
+      ctx.fillText(`YOU: ${Math.floor(raceProgress)}m`, canvas.width - 200, 35);
+      ctx.fillText(`OPP: ${Math.floor(opponentProgress)}m`, canvas.width - 200, 60);
+      ctx.fillText(`/${raceDistance}m`, canvas.width - 200, 80);
+    };
 
     const animate = () => {
       if (!isRacing) return;
 
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawHoustonMap(-raceProgress * 1.5);
 
-      // Road
-      ctx.fillStyle = '#333';
-      ctx.fillRect(canvas.width / 2 - 100, 0, 200, canvas.height);
-
-      // Lane lines
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 4;
-      for (let i = -50; i < canvas.height + 50; i += 60) {
-        const y = (i + roadOffset) % canvas.height;
-        ctx.beginPath();
-        ctx.moveTo(canvas.width / 2, y);
-        ctx.lineTo(canvas.width / 2, y + 30);
-        ctx.stroke();
+      // Countdown
+      if (!raceStarted) {
+        countdownTimer += 16;
+        if (countdownTimer > 1000) {
+          countdown--;
+          countdownTimer = 0;
+          if (countdown === 0) {
+            raceStarted = true;
+          }
+        }
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = countdown > 0 ? '#ffff00' : '#00ff00';
+        ctx.font = 'bold 120px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(countdown > 0 ? countdown.toString() : 'GO!', canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = 'left';
       }
 
-      roadOffset += speed;
+      if (raceStarted && !raceFinished) {
+        // Player controls
+        if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+          carSpeed += acceleration * (gear / 5);
+          rpm = Math.min(8000, carSpeed * 500 / gear);
+        } else {
+          carSpeed *= 0.98;
+          rpm *= 0.95;
+        }
+        
+        carSpeed = Math.min(carSpeed, maxSpeed * (gear / 5));
+        
+        // Lane changing
+        if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+          carX = Math.max(canvas.width / 2 - 110, carX - 3);
+        }
+        if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+          carX = Math.min(canvas.width / 2 + 10, carX + 3);
+        }
 
-      // Car
-      ctx.fillStyle = '#ff0000';
-      ctx.fillRect(canvas.width / 2 - 20, carY, 40, 70);
-      ctx.fillStyle = '#00ffff';
-      ctx.fillRect(canvas.width / 2 - 15, carY + 10, 30, 25);
+        raceProgress += carSpeed / 10;
+        opponentProgress += opponentSpeed / 10;
+
+        // Check finish
+        if (raceProgress >= raceDistance || opponentProgress >= raceDistance) {
+          raceFinished = true;
+        }
+      }
+
+      // Draw cars
+      drawCar(carX, carY, '#ff0000');
+      
+      // Opponent car (left lane)
+      const opponentX = canvas.width / 2 - 100;
+      const opponentY = canvas.height - 150 + (raceProgress - opponentProgress) * 1.5;
+      if (opponentY > -80 && opponentY < canvas.height) {
+        drawCar(opponentX, opponentY, '#0066ff');
+      }
+
+      drawHUD();
+
+      // Race result
+      if (raceFinished) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const won = raceProgress >= raceDistance && raceProgress > opponentProgress;
+        ctx.fillStyle = won ? '#00ff00' : '#ff0000';
+        ctx.font = 'bold 60px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(won ? 'YOU WIN!' : 'YOU LOSE!', canvas.width / 2, canvas.height / 2 - 40);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px monospace';
+        ctx.fillText(`Your time: ${(raceProgress / carSpeed * 6).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 20);
+        ctx.fillText(`Opponent: ${(opponentProgress / opponentSpeed * 6).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 60);
+        ctx.textAlign = 'left';
+        
+        setTimeout(() => setIsRacing(false), 5000);
+      }
 
       requestAnimationFrame(animate);
     };
@@ -150,6 +351,16 @@ export default function GrudgeDrive() {
                   height={600}
                   className="w-full rounded-lg border border-red-500/30"
                 />
+                <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
+                  <p className="text-sm text-gray-300 mb-2"><strong className="text-white">Controls:</strong></p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                    <div>↑/W - Accelerate</div>
+                    <div>←/→ or A/D - Change lanes</div>
+                    <div>Shift - Shift up</div>
+                    <div>Ctrl - Shift down</div>
+                  </div>
+                  <p className="text-xs text-yellow-400 mt-2">🏁 Drag race through Houston streets! Perfect your shifts!</p>
+                </div>
               </CardContent>
             </Card>
           )}
