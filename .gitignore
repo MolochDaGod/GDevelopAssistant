@@ -16,6 +16,7 @@ client/public/assets
 # Documentation and development files
 # Keep docs, ignore only large binaries if any
 !docs/
+docs/MiniWorldSprites/
 extensions
 scripts
 *.md
