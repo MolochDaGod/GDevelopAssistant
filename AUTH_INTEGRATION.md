@@ -73,7 +73,45 @@ function MyComponent() {
 import { apiCall } from '@/lib/auth';
 
 // Automatically includes Bearer token
-const data = await apiCall('users/profile');
+const data = await apiCall('user/profile');
+```
+
+## Backend API Endpoints
+
+The following protected endpoints are now available:
+
+### User Profile
+- `GET /api/user/profile` - Get current user's profile with game data
+  - Returns: user info, game profile, stats, wallet balances
+  - Authentication: Required
+  
+- `PATCH /api/user/profile` - Update user profile
+  - Body: `{ displayName?, firstName?, lastName? }`
+  - Authentication: Required
+
+### Characters
+- `GET /api/user/characters` - Get user's owned characters
+  - Authentication: Required
+
+### Stats
+- `GET /api/user/stats` - Get user's game statistics
+  - Returns: level, xp, games played, wins, win rate
+  - Authentication: Required
+
+### Example Usage
+```typescript
+import { apiCall } from '@/lib/auth';
+
+// Get user profile
+const profile = await apiCall('user/profile');
+console.log(profile.user.username); // "player123"
+console.log(profile.profile.level); // 5
+
+// Update profile
+await apiCall('user/profile', {
+  method: 'PATCH',
+  body: JSON.stringify({ displayName: 'NewName' })
+});
 ```
 
 ## Testing
@@ -139,9 +177,11 @@ Tokens are stored in `localStorage`:
 
 1. ✅ Auth integration completed
 2. ✅ Logout functionality added
-3. ⏳ Backend API endpoints to verify tokens
-4. ⏳ User profile page with auth data
-5. ⏳ Protected routes based on user permissions
+3. ✅ Backend API endpoints to verify tokens
+4. ✅ User profile API with auth data
+5. ✅ Protected routes based on user permissions
+6. ⏳ Enhanced profile page UI (in progress)
+7. ⏳ Deploy to production
 
 ## Related Documentation
 
