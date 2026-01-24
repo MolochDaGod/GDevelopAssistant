@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Home, Gamepad2, Loader2 } from "lucide-react";
 import { LoadingProvider } from "@/hooks/useLoading";
 import { PuterProvider } from "@/contexts/puter-context";
+import { AuthGuard } from "@/components/AuthGuard";
 
 import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
@@ -204,8 +205,10 @@ export default function App() {
       <TooltipProvider>
         <LoadingProvider>
           <PuterProvider>
-            <AppLayout />
-            <Toaster />
+            <AuthGuard>
+              <AppLayout />
+              <Toaster />
+            </AuthGuard>
           </PuterProvider>
         </LoadingProvider>
       </TooltipProvider>
