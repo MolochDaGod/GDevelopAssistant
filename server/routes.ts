@@ -29,6 +29,7 @@ function parseObjectPath(path: string): { bucketName: string; objectName: string
   return { bucketName, objectName };
 }
 // Grudge auth is handled in grudgeAuth.ts
+import { registerUserRoutes } from "./routes/user";
 import { lobbyManager } from "./multiplayer/lobby";
 import { overdriveEngine } from "./services/overdriveEngine";
 import { 
@@ -2749,6 +2750,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete character" });
     }
   });
+
+  // Register user profile and protected routes
+  registerUserRoutes(app);
 
   const httpServer = createServer(app);
   
