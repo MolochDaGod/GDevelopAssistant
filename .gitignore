@@ -27,7 +27,9 @@ client/public/assets/
 
 # Allow required build scripts and CI configs
 !scripts/asset-sync.js
+!scripts/asset-sync.mjs
 !scripts/google-drive-sync.js
+!scripts/google-drive-sync.mjs
 !.github/
 
 .vercel
