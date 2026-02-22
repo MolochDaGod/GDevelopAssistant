@@ -1,1 +1,231 @@
-import React, { useState, useEffect } from 'react';\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';\nimport { Badge } from '@/components/ui/badge';\nimport { Button } from '@/components/ui/button';\nimport {\n  BarChart3,\n  Play,\n  Pause,\n  RotateCcw,\n  Download,\n  AlertTriangle,\n  CheckCircle,\n  Clock,\n  Zap\n} from 'lucide-react';\nimport {\n  AnimationDebugger,\n  AnimationControllerBridge,\n  type CharacterAnimationState,\n  type AnimationEvent\n} from '@/lib/rts-animation';\n\ninterface AnimationDebugPanelProps {\n  debugger?: AnimationDebugger;\n  bridge?: AnimationControllerBridge;\n  enabled?: boolean;\n  onClose?: () => void;\n}\n\nexport function AnimationDebugPanel({\n  debugger: animDebugger,\n  bridge,\n  enabled = true,\n  onClose\n}: AnimationDebugPanelProps) {\n  const [isPaused, setIsPaused] = useState(false);\n  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);\n  const [characterStates, setCharacterStates] = useState<CharacterAnimationState[]>([]);\n  const [events, setEvents] = useState<AnimationEvent[]>([]);\n  const [metrics, setMetrics] = useState<any>(null);\n  const [conflicts, setConflicts] = useState<string[]>([]);\n\n  // Update panel data\n  useEffect(() => {\n    if (!enabled || !animDebugger || isPaused) return;\n\n    const interval = setInterval(() => {\n      setCharacterStates(animDebugger.getAllCharacterStates());\n\n      if (selectedCharacter) {\n        setEvents(animDebugger.getAnimationTimeline(selectedCharacter, 20));\n        setConflicts(animDebugger.checkBlendConflicts(selectedCharacter));\n      }\n\n      setMetrics(animDebugger.getPerformanceReport());\n    }, 100);\n\n    return () => clearInterval(interval);\n  }, [animDebugger, enabled, isPaused, selectedCharacter]);\n\n  if (!animDebugger || !enabled) return null;\n\n  return (\n    <div className=\"fixed bottom-4 right-4 w-96 max-h-[600px] z-50 shadow-2xl\">\n      <Card className=\"bg-gray-900 border-gray-700\">\n        <CardHeader className=\"pb-3 flex flex-row items-center justify-between\">\n          <div className=\"flex items-center gap-2\">\n            <BarChart3 className=\"w-5 h-5 text-cyan-400\" />\n            <CardTitle className=\"text-cyan-400\">Animation Debug</CardTitle>\n          </div>\n          <div className=\"flex gap-1\">\n            <Button\n              size=\"sm\"\n              variant=\"ghost\"\n              onClick={() => setIsPaused(!isPaused)}\n              className=\"h-6 w-6 p-0\"\n            >\n              {isPaused ? <Play className=\"w-3 h-3\" /> : <Pause className=\"w-3 h-3\" />}\n            </Button>\n            <Button\n              size=\"sm\"\n              variant=\"ghost\"\n              onClick={() => animDebugger.clear()}\n              className=\"h-6 w-6 p-0\"\n            >\n              <RotateCcw className=\"w-3 h-3\" />\n            </Button>\n            <Button\n              size=\"sm\"\n              variant=\"ghost\"\n              onClick={() => {\n                const data = animDebugger.exportData();\n                const blob = new Blob([data], { type: 'application/json' });\n                const url = URL.createObjectURL(blob);\n                const a = document.createElement('a');\n                a.href = url;\n                a.download = `anim-debug-${Date.now()}.json`;\n                a.click();\n              }}\n              className=\"h-6 w-6 p-0\"\n            >\n              <Download className=\"w-3 h-3\" />\n            </Button>\n            {onClose && (\n              <Button\n                size=\"sm\"\n                variant=\"ghost\"\n                onClick={onClose}\n                className=\"h-6 w-6 p-0\"\n              >\n                ✕\n              </Button>\n            )}\n          </div>\n        </CardHeader>\n\n        <CardContent className=\"space-y-3 max-h-[520px] overflow-y-auto text-xs\">\n          {/* Performance Metrics */}\n          {metrics && (\n            <div className=\"bg-gray-800/50 p-2 rounded space-y-1\">\n              <p className=\"font-semibold text-gray-300\">Performance</p>\n              <div className=\"grid grid-cols-2 gap-2 text-gray-400\">\n                <div>Avg Blend: {metrics.averageBlendTime.toFixed(3)}s</div>\n                <div>Error Rate: {(metrics.animationErrorRate * 100).toFixed(1)}%</div>\n                <div>Events: {metrics.totalEvents}</div>\n                <div>Memory: {metrics.memoryUsage}</div>\n              </div>\n            </div>\n          )}\n\n          {/* Conflicts */}\n          {conflicts.length > 0 && (\n            <div className=\"bg-red-900/20 border border-red-500/30 p-2 rounded space-y-1\">\n              <div className=\"flex items-center gap-2\">\n                <AlertTriangle className=\"w-3 h-3 text-red-400\" />\n                <p className=\"font-semibold text-red-300\">Issues</p>\n              </div>\n              <div className=\"space-y-1\">\n                {conflicts.map((conflict, i) => (\n                  <p key={i} className=\"text-red-300/80\">\n                    • {conflict}\n                  </p>\n                ))}\n              </div>\n            </div>\n          )}\n\n          {/* Characters */}\n          <div className=\"space-y-2\">\n            <p className=\"font-semibold text-gray-300\">Characters ({characterStates.length})</p>\n            <div className=\"space-y-1 max-h-32 overflow-y-auto\">\n              {characterStates.map(state => (\n                <button\n                  key={state.characterId}\n                  onClick={() => setSelectedCharacter(state.characterId)}\n                  className={`w-full text-left p-2 rounded transition-colors ${\n                    selectedCharacter === state.characterId\n                      ? 'bg-cyan-500/20 border border-cyan-500/50'\n                      : 'bg-gray-800/30 hover:bg-gray-800/50'\n                  }`}\n                >\n                  <div className=\"flex items-center justify-between\">\n                    <span className=\"font-mono text-gray-300\">{state.characterId}</span>\n                    <div className=\"flex items-center gap-1\">\n                      {state.isTransitioning && (\n                        <Zap className=\"w-3 h-3 text-yellow-400\" />\n                      )}\n                      {state.currentAnimation && (\n                        <Badge variant=\"outline\" className=\"text-xs\">\n                          {state.currentAnimation}\n                        </Badge>\n                      )}\n                    </div>\n                  </div>\n                  {state.blendingTo && (\n                    <p className=\"text-gray-500 text-xs mt-1\">\n                      → {state.blendingTo} ({(state.blendProgress * 100).toFixed(0)}%)\n                    </p>\n                  )}\n                </button>\n              ))}\n            </div>\n          </div>\n\n          {/* Selected Character Timeline */}\n          {selectedCharacter && events.length > 0 && (\n            <div className=\"space-y-2\">\n              <p className=\"font-semibold text-gray-300\">Timeline</p>\n              <div className=\"space-y-1 max-h-40 overflow-y-auto bg-gray-800/30 p-2 rounded\">\n                {events.map((event, i) => (\n                  <div key={i} className=\"flex items-center gap-2 text-gray-400\">\n                    <div className=\"flex-shrink-0 w-2 h-2 rounded-full\" \n                         style={{\n                           backgroundColor: {\n                             'start': '#22c55e',\n                             'end': '#ef4444',\n                             'blend': '#3b82f6',\n                             'interrupt': '#f59e0b',\n                             'error': '#dc2626'\n                           }[event.type] || '#6b7280'\n                         }}\n                    />\n                    <span className=\"flex-1\">\n                      <span className=\"text-gray-400\">{event.type}:</span>\n                      <span className=\"ml-1\">{event.animationName}</span>\n                    </span>\n                    {event.blendTime && (\n                      <span className=\"text-gray-500\">{event.blendTime.toFixed(2)}s</span>\n                    )}\n                  </div>\n                ))}\n              </div>\n            </div>\n          )}\n\n          {/* Legend */}\n          <div className=\"text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-700\">\n            <div className=\"flex items-center gap-2\">\n              <div className=\"w-2 h-2 rounded-full bg-green-500\" />\n              <span>Start</span>\n            </div>\n            <div className=\"flex items-center gap-2\">\n              <div className=\"w-2 h-2 rounded-full bg-blue-500\" />\n              <span>Blend</span>\n            </div>\n            <div className=\"flex items-center gap-2\">\n              <div className=\"w-2 h-2 rounded-full bg-red-500\" />\n              <span>Error</span>\n            </div>\n          </div>\n        </CardContent>\n      </Card>\n    </div>\n  );\n}\n\nexport default AnimationDebugPanel;\n
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  BarChart3,
+  Play,
+  Pause,
+  RotateCcw,
+  Download,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Zap
+} from 'lucide-react';
+import {
+  AnimationDebugger,
+  AnimationControllerBridge,
+  type CharacterAnimationState,
+  type AnimationEvent
+} from '@/lib/rts-animation';
+
+interface AnimationDebugPanelProps {
+  debugger?: AnimationDebugger;
+  bridge?: AnimationControllerBridge;
+  enabled?: boolean;
+  onClose?: () => void;
+}
+
+export function AnimationDebugPanel({
+  debugger: animDebugger,
+  bridge,
+  enabled = true,
+  onClose
+}: AnimationDebugPanelProps) {
+  const [isPaused, setIsPaused] = useState(false);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [characterStates, setCharacterStates] = useState<CharacterAnimationState[]>([]);
+  const [events, setEvents] = useState<AnimationEvent[]>([]);
+  const [metrics, setMetrics] = useState<any>(null);
+  const [conflicts, setConflicts] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!enabled || !animDebugger || isPaused) return;
+
+    const interval = setInterval(() => {
+      setCharacterStates(animDebugger.getAllCharacterStates());
+
+      if (selectedCharacter) {
+        setEvents(animDebugger.getAnimationTimeline(selectedCharacter, 20));
+        setConflicts(animDebugger.checkBlendConflicts(selectedCharacter));
+      }
+
+      setMetrics(animDebugger.getPerformanceReport());
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [animDebugger, enabled, isPaused, selectedCharacter]);
+
+  if (!animDebugger || !enabled) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 w-96 max-h-[600px] z-50 shadow-2xl">
+      <Card className="bg-gray-900 border-gray-700">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-cyan-400" />
+            <CardTitle className="text-cyan-400">Animation Debug</CardTitle>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsPaused(!isPaused)}
+              className="h-6 w-6 p-0"
+            >
+              {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => animDebugger.clear()}
+              className="h-6 w-6 p-0"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const data = animDebugger.exportData();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `anim-debug-${Date.now()}.json`;
+                a.click();
+              }}
+              className="h-6 w-6 p-0"
+            >
+              <Download className="w-3 h-3" />
+            </Button>
+            {onClose && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onClose}
+                className="h-6 w-6 p-0"
+              >
+                ✕
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-3 max-h-[520px] overflow-y-auto text-xs">
+          {metrics && (
+            <div className="bg-gray-800/50 p-2 rounded space-y-1">
+              <p className="font-semibold text-gray-300">Performance</p>
+              <div className="grid grid-cols-2 gap-2 text-gray-400">
+                <div>Avg Blend: {metrics.averageBlendTime.toFixed(3)}s</div>
+                <div>Error Rate: {(metrics.animationErrorRate * 100).toFixed(1)}%</div>
+                <div>Events: {metrics.totalEvents}</div>
+                <div>Memory: {metrics.memoryUsage}</div>
+              </div>
+            </div>
+          )}
+
+          {conflicts.length > 0 && (
+            <div className="bg-red-900/20 border border-red-500/30 p-2 rounded space-y-1">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-3 h-3 text-red-400" />
+                <p className="font-semibold text-red-300">Issues</p>
+              </div>
+              <div className="space-y-1">
+                {conflicts.map((conflict, i) => (
+                  <p key={i} className="text-red-300/80">
+                    • {conflict}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="font-semibold text-gray-300">Characters ({characterStates.length})</p>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {characterStates.map(state => (
+                <button
+                  key={state.characterId}
+                  onClick={() => setSelectedCharacter(state.characterId)}
+                  className={`w-full text-left p-2 rounded transition-colors ${
+                    selectedCharacter === state.characterId
+                      ? 'bg-cyan-500/20 border border-cyan-500/50'
+                      : 'bg-gray-800/30 hover:bg-gray-800/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-gray-300">{state.characterId}</span>
+                    <div className="flex items-center gap-1">
+                      {state.isTransitioning && (
+                        <Zap className="w-3 h-3 text-yellow-400" />
+                      )}
+                      {state.currentAnimation && (
+                        <Badge variant="outline" className="text-xs">
+                          {state.currentAnimation}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {state.blendingTo && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      → {state.blendingTo} ({(state.blendProgress * 100).toFixed(0)}%)
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selectedCharacter && events.length > 0 && (
+            <div className="space-y-2">
+              <p className="font-semibold text-gray-300">Timeline</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto bg-gray-800/30 p-2 rounded">
+                {events.map((event, i) => (
+                  <div key={i} className="flex items-center gap-2 text-gray-400">
+                    <div className="flex-shrink-0 w-2 h-2 rounded-full" 
+                         style={{
+                           backgroundColor: ({
+                             'start': '#22c55e',
+                             'end': '#ef4444',
+                             'blend': '#3b82f6',
+                             'interrupt': '#f59e0b',
+                             'error': '#dc2626'
+                           } as Record<string, string>)[event.type] || '#6b7280'
+                         }}
+                    />
+                    <span className="flex-1">
+                      <span className="text-gray-400">{event.type}:</span>
+                      <span className="ml-1">{event.animationName}</span>
+                    </span>
+                    {event.blendTime && (
+                      <span className="text-gray-500">{event.blendTime.toFixed(2)}s</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span>Start</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>Blend</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Error</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default AnimationDebugPanel;

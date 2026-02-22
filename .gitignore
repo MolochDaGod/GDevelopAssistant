@@ -6,31 +6,20 @@ vite.config.ts.*
 *.tar.gz
 
 # Large asset directories - excluded from deployment
-attached_assets
-public/assets
-public/grudge-warlords
-public/grudge-drive
-public/games
-client/public/assets
-
-# Documentation and development files
-# Keep docs, ignore only large binaries if any
-!docs/
-docs/MiniWorldSprites/
-extensions
-scripts
-*.md
-!replit.md
-.env*.local
 attached_assets/
 public/assets/
+public/grudge-warlords/
+public/grudge-drive/
+public/games/
 client/public/assets/
 
-# Allow required build scripts and CI configs
-!scripts/asset-sync.js
-!scripts/asset-sync.mjs
-!scripts/google-drive-sync.js
-!scripts/google-drive-sync.mjs
-!.github/
+# Large binary docs
+docs/MiniWorldSprites/
+extensions/
 
+# Environment files
+.env
+.env*.local
+
+# Vercel
 .vercel

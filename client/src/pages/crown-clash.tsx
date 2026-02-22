@@ -18,16 +18,18 @@ import {
   Target
 } from "lucide-react";
 
-import skeletonSprite from "@assets/generated_images/skeleton_warrior_pixel_sprite.png";
-import elfArcherSprite from "@assets/generated_images/elf_archer_pixel_sprite.png";
-import scourgeWarriorSprite from "@assets/generated_images/scourge_warrior_pixel_sprite.png";
-import dwarfKnightSprite from "@assets/generated_images/dwarf_knight_pixel_sprite.png";
-import fireballSprite from "@assets/generated_images/fireball_spell_icon.png";
-import explosionSprite from "@assets/generated_images/explosion_spell_icon.png";
-import bossShipSprite from "@assets/generated_images/boss_ship_pixel_sprite.png";
-import shipSprite from "@assets/generated_images/boss_ship_pixel_sprite.png";
-import grudgeWarriorSprite from "@assets/generated_images/grudge_knight_pixel_sprite.png";
-import gameboardImage from "@assets/19af6f937ed4b_1765080270121.png";
+import {
+  skeletonSprite,
+  elfArcherSprite,
+  scourgeWarriorSprite,
+  dwarfKnightSprite,
+  fireballSprite,
+  explosionSprite,
+  bossShipSprite,
+  shipSprite,
+  grudgeWarriorSprite,
+  gameboardImage,
+} from "@/lib/placeholderSprites";
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 

@@ -4,6 +4,7 @@ dotenv.config();
 import express, { type Request, Response, NextFunction } from "express";
 import { serveStatic, log } from "../server/vite";
 import { storage } from "../server/storage";
+import { isDatabaseConfigured } from "../server/db";
 import { setupGrudgeAuth } from "../server/grudgeAuth";
 
 const app = express();
@@ -51,19 +52,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Setup auth
-setupGrudgeAuth(app);
-log("Grudge Authentication configured");
+// Setup auth (only if DB is available, otherwise auth endpoints will fail gracefully)
+if (isDatabaseConfigured()) {
+  setupGrudgeAuth(app);
+  log("Grudge Authentication configured");
 
-// Seed assets asynchronously without blocking function invocation
-storage.seedAssets()
-  .then(() => storage.seedRtsAssets())
-  .then(() => storage.seedGameData())
-  .then(() => log("Database seeded successfully"))
-  .catch(err => {
-    log("Warning: Database seeding failed (this is OK for serverless cold starts)");
-    console.error(err);
-  });
+  // Seed assets asynchronously without blocking function invocation
+  storage.seedAssets()
+    .then(() => storage.seedRtsAssets())
+    .then(() => storage.seedGameData())
+    .then(() => log("Database seeded successfully"))
+    .catch(err => {
+      log("Warning: Database seeding failed (this is OK for serverless cold starts)");
+      console.error(err);
+    });
+} else {
+  log("Warning: DATABASE_URL not set - running without database (games still work)");
+}
 
 // Lazy-load and register routes on first request to avoid blocking cold start
 let routesRegistered = false;

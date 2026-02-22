@@ -5,6 +5,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import { isDatabaseConfigured } from "./db";
 import { setupGrudgeAuth } from "./grudgeAuth";
 
 const app = express();
@@ -53,18 +54,22 @@ app.use((req, res, next) => {
 
 (async () => {
   // Set up Grudge authentication
-  setupGrudgeAuth(app);
-  log("Grudge Authentication configured");
+  if (isDatabaseConfigured()) {
+    setupGrudgeAuth(app);
+    log("Grudge Authentication configured");
 
-  // Seed assets on startup (optional for local dev)
-  try {
-    await storage.seedAssets();
-    await storage.seedRtsAssets();
-    await storage.seedGameData();
-    log("Database seeded successfully");
-  } catch (error) {
-    log("Warning: Database seeding failed (this is OK for local dev without database)");
-    console.error(error);
+    // Seed assets on startup (optional for local dev)
+    try {
+      await storage.seedAssets();
+      await storage.seedRtsAssets();
+      await storage.seedGameData();
+      log("Database seeded successfully");
+    } catch (error) {
+      log("Warning: Database seeding failed (this is OK for local dev without database)");
+      console.error(error);
+    }
+  } else {
+    log("Warning: DATABASE_URL not set - running without database (games still work)");
   }
 
   const server = await registerRoutes(app);
