@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import puterService, { type PuterUser } from '@/lib/puter';
+import puterStorage from '@/lib/puterStorage';
 import { PuterLoader } from '@/components/puter-loader';
+import { getAuthData } from '@/lib/auth';
 
 interface PuterContextType {
   isReady: boolean;
@@ -49,11 +51,22 @@ export function PuterProvider({ children }: { children: ReactNode }) {
       await puterService.init();
       setIsAvailable(true);
       
-      const signedIn = await puterService.isSignedIn();
-      setIsSignedIn(signedIn);
-      if (signedIn) {
-        const userData = await puterService.getUser();
-        setUser(userData);
+      // Auth check wrapped in its own try/catch — Puter SDK calls
+      // api.puter.com/whoami which returns 401 when not signed in.
+      // This is expected and should not surface as an error.
+      try {
+        const signedIn = await puterService.isSignedIn();
+        setIsSignedIn(signedIn);
+        if (signedIn) {
+          const userData = await puterService.getUser();
+          setUser(userData);
+          // Auto-initialize GRUDA directory tree on Puter cloud
+          await initPuterStorageAndLink(userData);
+        }
+      } catch {
+        // 401 from Puter API = not signed in, this is normal
+        setIsSignedIn(false);
+        setUser(null);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize cloud storage';
@@ -75,6 +88,37 @@ export function PuterProvider({ children }: { children: ReactNode }) {
     initPuter();
   }, [initPuter]);
 
+  // Initialize Puter storage directories and link Puter UUID to Grudge account
+  const initPuterStorageAndLink = useCallback(async (userData: PuterUser | null) => {
+    try {
+      await puterStorage.initializeDirectories();
+    } catch (err) {
+      console.warn('Failed to initialize Puter directories:', err);
+    }
+    // Link Puter UUID to Grudge user if both are available
+    if (userData?.uuid) {
+      const authData = getAuthData();
+      if (authData?.userId) {
+        try {
+          await fetch('/api/auth/link-puter', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authData.token}`,
+              'x-grudge-user-id': authData.userId,
+            },
+            body: JSON.stringify({
+              puterUuid: userData.uuid,
+              puterUsername: userData.username,
+            }),
+          });
+        } catch {
+          // Non-critical — linkage is also stored client-side
+        }
+      }
+    }
+  }, []);
+
   const retry = useCallback(async () => {
     await initPuter();
   }, [initPuter]);
@@ -85,8 +129,10 @@ export function PuterProvider({ children }: { children: ReactNode }) {
     if (userData) {
       setUser(userData);
       setIsSignedIn(true);
+      // Auto-initialize storage + link account after manual sign-in
+      await initPuterStorageAndLink(userData);
     }
-  }, []);
+  }, [initPuterStorageAndLink]);
 
   const signOut = useCallback(async () => {
     setLoadingMessage('Signing out...');

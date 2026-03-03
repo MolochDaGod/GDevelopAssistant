@@ -30,6 +30,8 @@ function parseObjectPath(path: string): { bucketName: string; objectName: string
 }
 // Grudge auth is handled in grudgeAuth.ts
 import { registerUserRoutes } from "./routes/user";
+import { registerGrudaWarsRoutes } from "./routes/grudaWars";
+import { registerGrudaLegionRoutes } from "./services/grudaLegion";
 import { lobbyManager } from "./multiplayer/lobby";
 import { overdriveEngine } from "./services/overdriveEngine";
 import { 
@@ -192,6 +194,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use(express.static(path.join(process.cwd(), "public")));
   }
   
+  // Gruda Wars routes (hero sync, GRUDACHAIN status, WCS config)
+  registerGrudaWarsRoutes(app);
+
+  // GRUDA Legion proxy (AI chat, code gen, health check → Railway deployment)
+  registerGrudaLegionRoutes(app);
+
   // Health check endpoint for autoscale monitoring
   app.get("/health", async (req, res) => {
     try {

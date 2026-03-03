@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express, { type Request, Response, NextFunction } from "express";
-import { serveStatic, log } from "../server/vite";
+import { serveStatic, log } from "../server/serverUtils";
 import { storage } from "../server/storage";
 import { isDatabaseConfigured } from "../server/db";
 import { setupGrudgeAuth } from "../server/grudgeAuth";
@@ -70,18 +70,20 @@ if (isDatabaseConfigured()) {
   log("Warning: DATABASE_URL not set - running without database (games still work)");
 }
 
-// Lazy-load and register routes on first request to avoid blocking cold start
+// Lazy-load API-only routes on first request (skips HTTP server + Socket.IO creation)
 let routesRegistered = false;
 app.use(async (req, res, next) => {
   if (!routesRegistered) {
     try {
       const { registerRoutes } = await import("../server/routes");
+      // registerRoutes returns an HTTP server (for local dev), but we
+      // don't need it in serverless — Vercel provides its own.
+      // The route handlers are still registered on `app`.
       await registerRoutes(app);
       routesRegistered = true;
       log("Routes registered successfully");
     } catch (error) {
       console.error("Failed to register routes:", error);
-      // Continue anyway - some routes may work
     }
   }
   next();

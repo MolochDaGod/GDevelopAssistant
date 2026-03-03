@@ -7,8 +7,9 @@ interface AuthGuardProps {
 }
 
 /**
- * AuthGuard component that checks for authentication before rendering children
- * Redirects to auth-gateway-flax.vercel.app if not authenticated
+ * AuthGuard component that checks for authentication before rendering children.
+ * Redirects to auth-gateway if not authenticated.
+ * Redirects to /onboarding on first visit (no grudge_onboarded in localStorage).
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const [auth, setAuth] = useState<AuthData | null>(null);
@@ -22,6 +23,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
       // User is authenticated
       setAuth(authData);
       setLoading(false);
+
+      // If user hasn't completed onboarding, redirect (unless already on /onboarding)
+      const onboarded = localStorage.getItem('grudge_onboarded');
+      if (!onboarded && !window.location.pathname.startsWith('/onboarding')) {
+        window.location.replace('/onboarding');
+      }
     } else {
       // No auth data, redirect to login
       // Give a brief moment to show loading state

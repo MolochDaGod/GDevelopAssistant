@@ -49,6 +49,8 @@ const SwarmGalactic = lazy(() => import("@/pages/swarm-galactic"));
 const MMOWorld = lazy(() => import("@/pages/mmo-world"));
 const FeaturedGames = lazy(() => import("@/pages/featured-games"));
 const GrudgeSwarm = lazy(() => import("@/pages/grudge-swarm"));
+const GrudaWars = lazy(() => import("@/pages/gruda-wars"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding"));
 
 function PageLoader() {
   return (
@@ -99,6 +101,8 @@ function Router() {
         <Route path="/mmo" component={MMOWorld} />
         <Route path="/games" component={FeaturedGames} />
         <Route path="/grudge-swarm" component={GrudgeSwarm} />
+        <Route path="/gruda-wars" component={GrudaWars} />
+        <Route path="/onboarding" component={OnboardingPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -140,10 +144,14 @@ function Header() {
     if (location === "/swarm-galactic") return "Galactic Conquest";
     if (location === "/warlords") return "Grudge Warlords";
     if (location === "/grudge-swarm") return "Grudge Swarm";
+    if (location === "/gruda-wars") return "Gruda Wars";
+    if (location === "/mmo") return "MMO World";
+    if (location === "/games") return "Featured Games";
+    if (location === "/onboarding") return "Get Started";
     return "Grudge Brawl";
   };
 
-  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm"].some(
+  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo"].some(
     path => location === path
   );
 

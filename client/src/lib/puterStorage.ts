@@ -22,7 +22,8 @@ declare global {
         set: (key: string, value: unknown) => Promise<void>;
         get: (key: string) => Promise<unknown>;
         del: (key: string) => Promise<void>;
-        list: (options?: { prefix?: string }) => Promise<string[]>;
+        list: (pattern?: string, returnValues?: boolean) => Promise<string[]>;
+        flush: () => Promise<void>;
       };
     };
   }
@@ -49,14 +50,18 @@ export interface UploadProgress {
  * Provides serverless cloud storage for game assets, projects, and exports
  * 
  * Directory Structure:
- * - /GRUDA/assets/models/     - 3D model files (.glb, .gltf)
- * - /GRUDA/assets/textures/   - Texture files
- * - /GRUDA/assets/animations/ - Animation files
- * - /GRUDA/assets/audio/      - Audio files
- * - /GRUDA/projects/          - Saved projects and scenes
- * - /GRUDA/exports/           - Exported game levels
+ * - /GRUDA/assets/models/       - 3D model files (.glb, .gltf)
+ * - /GRUDA/assets/textures/     - Texture files
+ * - /GRUDA/assets/animations/   - Animation files
+ * - /GRUDA/assets/audio/        - Audio files
+ * - /GRUDA/projects/            - Saved projects and scenes
+ * - /GRUDA/exports/             - Exported game levels
+ * - /GRUDA/gruda-wars/heroes/   - Synced WCS hero data (JSON per hero)
+ * - /GRUDA/gruda-wars/saves/    - Gruda Wars game save slots
+ * - /GRUDA/gruda-wars/settings/ - Per-user Gruda Wars settings
  * 
- * Used by: Grudge Warlords Builder, Asset Registry, Project Manager
+ * Connected to: Railway GRUDA Legion (MolochDaGod/grudachain master)
+ * Used by: Grudge Warlords Builder, Asset Registry, Gruda Wars, Project Manager
  */
 class PuterStorageService {
   private basePath = '/GRUDA';
@@ -76,7 +81,12 @@ class PuterStorageService {
 
   async isSignedIn(): Promise<boolean> {
     if (!this.isAvailable) return false;
-    return this.puter.auth.isSignedIn();
+    try {
+      return this.puter.auth.isSignedIn();
+    } catch {
+      // SDK may throw if auth state is unavailable
+      return false;
+    }
   }
 
   async signIn(): Promise<void> {
@@ -91,8 +101,13 @@ class PuterStorageService {
 
   async getUser(): Promise<{ username: string; uuid: string; email?: string } | null> {
     if (!this.isAvailable) return null;
-    if (!this.puter.auth.isSignedIn()) return null;
-    return await this.puter.auth.getUser();
+    try {
+      if (!this.puter.auth.isSignedIn()) return null;
+      return await this.puter.auth.getUser();
+    } catch {
+      // getUser calls api.puter.com/whoami which returns 401 when session expired
+      return null;
+    }
   }
 
   async initializeDirectories(): Promise<void> {
@@ -107,6 +122,11 @@ class PuterStorageService {
       `${this.basePath}/assets/audio`,
       `${this.basePath}/projects`,
       `${this.basePath}/exports`,
+      // Gruda Wars hero saves, game saves, and per-user settings
+      `${this.basePath}/gruda-wars`,
+      `${this.basePath}/gruda-wars/heroes`,
+      `${this.basePath}/gruda-wars/saves`,
+      `${this.basePath}/gruda-wars/settings`,
     ];
 
     for (const dir of dirs) {
@@ -213,7 +233,7 @@ class PuterStorageService {
 
   async listProjects(): Promise<string[]> {
     if (!this.isAvailable) return [];
-    const keys = await this.puter.kv.list({ prefix: 'project:' });
+    const keys = await this.puter.kv.list('project:*');
     return keys.map(key => key.replace('project:', ''));
   }
 }

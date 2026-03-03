@@ -192,7 +192,7 @@ class PuterService {
 
   async listSaves(): Promise<string[]> {
     await this.ensureReady();
-    const allKeys = await window.puter.kv.list();
+    const allKeys = await window.puter.kv.list(`${STORAGE_PREFIX}save_*`);
     const savePrefix = `${STORAGE_PREFIX}save_`;
     return allKeys
       .filter((key: string) => key.startsWith(savePrefix))
@@ -221,11 +221,8 @@ class PuterService {
 
   async clearSession(): Promise<void> {
     await this.ensureReady();
-    const allKeys = await window.puter.kv.list();
-    const sessionPrefix = `${STORAGE_PREFIX}session_`;
-    for (const key of allKeys.filter((k: string) =>
-      k.startsWith(sessionPrefix),
-    )) {
+    const allKeys = await window.puter.kv.list(`${STORAGE_PREFIX}session_*`);
+    for (const key of allKeys) {
       await window.puter.kv.del(key);
     }
   }
@@ -275,11 +272,8 @@ class PuterService {
     await this.ensureReady();
     this.showLoading("Clearing data...");
     try {
-      const allKeys = await window.puter.kv.list();
-      const grudgeKeys = allKeys.filter((key: string) =>
-        key.startsWith(STORAGE_PREFIX),
-      );
-      for (const key of grudgeKeys) {
+      const allKeys = await window.puter.kv.list(`${STORAGE_PREFIX}*`);
+      for (const key of allKeys) {
         await window.puter.kv.del(key);
       }
     } finally {

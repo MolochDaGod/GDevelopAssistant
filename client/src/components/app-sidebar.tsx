@@ -2,7 +2,8 @@ import {
   MessageSquare, BookOpen, Settings, 
   Swords, Wand2, Users, User, Wallet, Trophy, Sword, Crown,
   Joystick, Puzzle, Zap, Rocket, Box, Plane, Shield, Target, Crosshair, Map,
-  Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2, Play
+  Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2,
+  Compass,
 } from "lucide-react";
 import {
   Sidebar,
@@ -128,6 +129,12 @@ const featured3DGames = [
     url: "/grudge-swarm",
     icon: Hexagon,
     badge: "RTS",
+  },
+  {
+    title: "Gruda Wars",
+    url: "/gruda-wars",
+    icon: Sword,
+    badge: "RPG",
   },
 ];
 
@@ -339,12 +346,12 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton 
               asChild 
-              data-active={location === "/intro"}
-              data-testid="link-intro-video"
+              data-active={location === "/onboarding"}
+              data-testid="link-get-started"
             >
-              <Link href="/intro">
-                <Play className="h-4 w-4" />
-                <span>Intro Video</span>
+              <Link href="/onboarding">
+                <Compass className="h-4 w-4" />
+                <span>Get Started</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
