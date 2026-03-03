@@ -53,12 +53,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Set up Grudge authentication
-  if (isDatabaseConfigured()) {
-    setupGrudgeAuth(app);
-    log("Grudge Authentication configured");
+  // Auth routes proxy to auth-gateway — no DB required
+  setupGrudgeAuth(app);
+  log("Grudge Authentication configured (gateway proxy mode)");
 
-    // Seed assets on startup (optional for local dev)
+  // Seed database if configured (optional)
+  if (isDatabaseConfigured()) {
     try {
       await storage.seedAssets();
       await storage.seedRtsAssets();
@@ -99,7 +99,6 @@ app.use((req, res, next) => {
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });

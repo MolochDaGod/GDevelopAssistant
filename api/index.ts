@@ -52,12 +52,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Setup auth (only if DB is available, otherwise auth endpoints will fail gracefully)
-if (isDatabaseConfigured()) {
-  setupGrudgeAuth(app);
-  log("Grudge Authentication configured");
+// Auth routes proxy to auth-gateway — no DB required
+setupGrudgeAuth(app);
+log("Grudge Authentication configured (gateway proxy mode)");
 
-  // Seed assets asynchronously without blocking function invocation
+// Seed database if configured (optional — games still work without DB)
+if (isDatabaseConfigured()) {
   storage.seedAssets()
     .then(() => storage.seedRtsAssets())
     .then(() => storage.seedGameData())

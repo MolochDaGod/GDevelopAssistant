@@ -1,114 +1,201 @@
 /**
- * Authentication utilities for Grudge Auth Gateway integration
- * Gateway URL: https://auth-gateway-flax.vercel.app
+ * Grudge Studio Unified Authentication
+ *
+ * All auth flows produce the same result: a JWT stored as `grudge_auth_token`.
+ *
+ * Supported flows:
+ *  1. Username/password → auth-gateway /api/login → JWT
+ *  2. Puter.js sign-in  → /api/auth/puter { puterUuid } → JWT
+ *  3. Auth-gateway redirect (external login page) → JWT via URL param
+ *  4. Guest login → auth-gateway /api/guest → JWT
+ *
+ * Source of truth: auth-gateway-flax.vercel.app (shared `accounts` table)
  */
 
 const AUTH_GATEWAY = 'https://auth-gateway-flax.vercel.app';
 
+// ── localStorage keys (shared across all Grudge Studio apps) ──
+const KEYS = {
+  token: 'grudge_auth_token',
+  grudgeId: 'grudge_id',
+  userId: 'grudge_user_id',
+  username: 'grudge_username',
+  isPuter: 'grudge_puter_auth',
+} as const;
+
 export interface AuthData {
   token: string;
+  grudgeId: string;
   userId: string;
   username: string;
+  isPuter?: boolean;
 }
 
-/**
- * Check if user is authenticated by verifying localStorage tokens
- * @returns AuthData if authenticated, null otherwise (redirects to login)
- */
-export function checkAuth(): AuthData | null {
-  const token = localStorage.getItem('grudge_auth_token');
-  const userId = localStorage.getItem('grudge_user_id');
-  const username = localStorage.getItem('grudge_username');
-  
-  if (!token || !userId) {
-    // No auth - redirect to login
-    redirectToLogin();
-    return null;
-  }
-  
+// ── Storage helpers ──
+
+/** Save auth response from any flow into localStorage. */
+export function storeAuth(data: {
+  token: string;
+  grudgeId?: string;
+  userId?: string;
+  username?: string;
+  displayName?: string;
+  isPuter?: boolean;
+}) {
+  localStorage.setItem(KEYS.token, data.token);
+  if (data.grudgeId) localStorage.setItem(KEYS.grudgeId, data.grudgeId);
+  if (data.userId) localStorage.setItem(KEYS.userId, String(data.userId));
+  localStorage.setItem(KEYS.username, data.displayName || data.username || 'Player');
+  if (data.isPuter) localStorage.setItem(KEYS.isPuter, 'true');
+}
+
+/** Clear all auth data. */
+function clearAuth() {
+  Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+}
+
+// ── Public API ──
+
+/** Get current auth data without redirecting. Returns null if not logged in. */
+export function getAuthData(): AuthData | null {
+  const token = localStorage.getItem(KEYS.token);
+  const grudgeId = localStorage.getItem(KEYS.grudgeId);
+  const userId = localStorage.getItem(KEYS.userId);
+  const username = localStorage.getItem(KEYS.username);
+
+  if (!token) return null;
+
   return {
     token,
-    userId,
-    username: username || 'Player'
+    grudgeId: grudgeId || '',
+    userId: userId || grudgeId || '',
+    username: username || 'Player',
+    isPuter: localStorage.getItem(KEYS.isPuter) === 'true',
   };
 }
 
-/**
- * Redirect to auth gateway login page
- * @param customReturnUrl Optional custom return URL (defaults to current location)
- */
+/** Check auth — redirects to login if missing. */
+export function checkAuth(): AuthData | null {
+  const auth = getAuthData();
+  if (!auth) {
+    redirectToLogin();
+    return null;
+  }
+  return auth;
+}
+
+export function hasAuthToken(): boolean {
+  return !!localStorage.getItem(KEYS.token);
+}
+
+/** Redirect to auth-gateway login page. */
 export function redirectToLogin(customReturnUrl?: string) {
   const returnUrl = encodeURIComponent(customReturnUrl || window.location.href);
   window.location.href = `${AUTH_GATEWAY}?return=${returnUrl}`;
 }
 
-/**
- * Logout user by clearing tokens and redirecting to login
- */
+/** Logout — clears tokens and redirects. */
 export function logout() {
-  localStorage.removeItem('grudge_auth_token');
-  localStorage.removeItem('grudge_user_id');
-  localStorage.removeItem('grudge_username');
+  clearAuth();
   redirectToLogin();
 }
 
-/**
- * Make an authenticated API call
- * @param endpoint API endpoint (relative path)
- * @param options Fetch options
- * @returns Response data or null if unauthorized
- */
+/** Logout without redirect (for switching accounts, etc.) */
+export function logoutSilent() {
+  clearAuth();
+}
+
+// ── API call helper ──
+
+/** Make an authenticated API call. Sends JWT in Authorization header. */
 export async function apiCall<T = any>(
-  endpoint: string, 
-  options: RequestInit = {}
+  endpoint: string,
+  options: RequestInit = {},
 ): Promise<T | null> {
-  const token = localStorage.getItem('grudge_auth_token');
-  
+  const token = localStorage.getItem(KEYS.token);
+
   if (!token) {
     logout();
     return null;
   }
-  
+
   const response = await fetch(`/api/${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers
-    }
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
   });
-  
-  // Handle 401 Unauthorized
+
   if (response.status === 401) {
     logout();
     return null;
   }
-  
+
   return response.json();
 }
 
-/**
- * Check if user has a valid token (doesn't validate with server)
- */
-export function hasAuthToken(): boolean {
-  return !!(localStorage.getItem('grudge_auth_token') && localStorage.getItem('grudge_user_id'));
+// ── Auth flows ──
+
+/** Login with username + password via auth-gateway. */
+export async function loginWithPassword(username: string, password: string) {
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth(data);
+  }
+  return data;
 }
 
-/**
- * Get current auth data without redirecting
- */
-export function getAuthData(): AuthData | null {
-  const token = localStorage.getItem('grudge_auth_token');
-  const userId = localStorage.getItem('grudge_user_id');
-  const username = localStorage.getItem('grudge_username');
-  
-  if (!token || !userId) {
-    return null;
+/** Register via auth-gateway. */
+export async function registerAccount(username: string, password: string, email?: string) {
+  const res = await fetch('/api/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, email }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth(data);
   }
-  
-  return {
-    token,
-    userId,
-    username: username || 'Player'
-  };
+  return data;
+}
+
+/** Bridge Puter.js auth to a Grudge JWT. Call after puter.auth.signIn(). */
+export async function loginWithPuter(puterUuid: string, puterUsername: string) {
+  const res = await fetch('/api/auth/puter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ puterUuid, puterUsername }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth({ ...data, isPuter: true });
+  }
+  return data;
+}
+
+/** Guest login via auth-gateway. */
+export async function loginAsGuest(deviceId?: string) {
+  const id = deviceId || crypto.randomUUID().slice(0, 12);
+  const res = await fetch('/api/guest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId: id }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth(data);
+  }
+  return data;
+}
+
+/** Verify current token with server. Returns full profile or null. */
+export async function verifyToken() {
+  return apiCall('auth/verify');
 }
