@@ -175,7 +175,8 @@ export async function saveMMOCharacterState(charState: any) {
       RETURNING *
     `;
     return result[0];
-  } catch (error) {\n    console.error("Error saving MMO character state:", error);
+  } catch (error) {
+    console.error("Error saving MMO character state:", error);
     throw error;
   }
 }

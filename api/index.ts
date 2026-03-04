@@ -1,106 +1,123 @@
-import dotenv from "dotenv";
-dotenv.config();
+/**
+ * Vercel serverless entry point.
+ * Uses lazy bootstrap so the module evaluates without importing heavy
+ * server dependencies.  If bootstrap fails, the handler returns a
+ * JSON error instead of crashing with FUNCTION_INVOCATION_FAILED.
+ */
 
-import express, { type Request, Response, NextFunction } from "express";
-import { serveStatic, log } from "../server/serverUtils";
-import { storage } from "../server/storage";
-import { isDatabaseConfigured } from "../server/db";
-import { setupGrudgeAuth } from "../server/grudgeAuth";
+let _app: any = null;
+let _initError: any = null;
 
-const app = express();
+async function bootstrap() {
+  // ── dynamic imports — only evaluated on first request ──
+  const { default: dotenv } = await import("dotenv");
+  dotenv.config();
 
-declare module 'http' {
-  interface IncomingMessage {
-    rawBody: unknown
-  }
-}
+  const { default: express } = await import("express");
+  const { serveStatic, log } = await import("../server/serverUtils");
+  const { storage } = await import("../server/storage");
+  const { isDatabaseConfigured } = await import("../server/db");
+  const { setupGrudgeAuth } = await import("../server/grudgeAuth");
 
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-app.use(express.urlencoded({ extended: false }));
+  const app = express();
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  app.use(express.json({
+    verify: (req: any, _res: any, buf: any) => { req.rawBody = buf; },
+  }));
+  app.use(express.urlencoded({ extended: false }));
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+  // Request logger
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now();
+    const reqPath = req.path;
+    let captured: any;
+    const origJson = res.json;
+    res.json = function (body: any, ...a: any[]) {
+      captured = body;
+      return origJson.apply(res, [body, ...a]);
+    };
+    res.on("finish", () => {
+      if (reqPath.startsWith("/api")) {
+        let line = `${req.method} ${reqPath} ${res.statusCode} in ${Date.now() - start}ms`;
+        if (captured) line += ` :: ${JSON.stringify(captured)}`;
+        if (line.length > 80) line = line.slice(0, 79) + "…";
+        log(line);
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
+    });
+    next();
   });
 
-  next();
-});
+  // Auth routes (gateway proxy — no DB needed)
+  setupGrudgeAuth(app);
+  log("Grudge Authentication configured (gateway proxy mode)");
 
-// Auth routes proxy to auth-gateway — no DB required
-setupGrudgeAuth(app);
-log("Grudge Authentication configured (gateway proxy mode)");
+  // Seed DB if configured
+  if (isDatabaseConfigured()) {
+    storage.seedAssets()
+      .then(() => storage.seedRtsAssets())
+      .then(() => storage.seedGameData())
+      .then(() => log("Database seeded successfully"))
+      .catch((err: any) => {
+        log("Warning: Database seeding failed (OK for serverless cold starts)");
+        console.error(err);
+      });
+  } else {
+    log("Warning: DATABASE_URL not set — running without database");
+  }
 
-// Seed database if configured (optional — games still work without DB)
-if (isDatabaseConfigured()) {
-  storage.seedAssets()
-    .then(() => storage.seedRtsAssets())
-    .then(() => storage.seedGameData())
-    .then(() => log("Database seeded successfully"))
-    .catch(err => {
-      log("Warning: Database seeding failed (this is OK for serverless cold starts)");
-      console.error(err);
-    });
-} else {
-  log("Warning: DATABASE_URL not set - running without database (games still work)");
+  // Lazy-load heavy routes on first request
+  let routesRegistered = false;
+  app.use(async (req: any, res: any, next: any) => {
+    if (!routesRegistered) {
+      try {
+        const { registerRoutes } = await import("../server/routes");
+        await registerRoutes(app);
+        routesRegistered = true;
+        log("Routes registered successfully");
+      } catch (error) {
+        console.error("Failed to register routes:", error);
+      }
+    }
+    next();
+  });
+
+  // Error handler
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    console.error("Request error:", err);
+    res.status(status).json({ message });
+  });
+
+  serveStatic(app);
+  log("Serverless function initialized");
+  return app;
 }
 
-// Lazy-load API-only routes on first request (skips HTTP server + Socket.IO creation)
-let routesRegistered = false;
-app.use(async (req, res, next) => {
-  if (!routesRegistered) {
+export default async function handler(req: any, res: any) {
+  // Return cached error from a previous failed bootstrap
+  if (_initError) {
+    return res.status(500).json({
+      error: "Function bootstrap failed",
+      message: _initError.message,
+      stack: _initError.stack?.split("\n").slice(0, 10),
+    });
+  }
+
+  // Lazy-init on first invocation
+  if (!_app) {
     try {
-      const { registerRoutes } = await import("../server/routes");
-      // registerRoutes returns an HTTP server (for local dev), but we
-      // don't need it in serverless — Vercel provides its own.
-      // The route handlers are still registered on `app`.
-      await registerRoutes(app);
-      routesRegistered = true;
-      log("Routes registered successfully");
-    } catch (error) {
-      console.error("Failed to register routes:", error);
+      _app = await bootstrap();
+    } catch (err: any) {
+      _initError = err;
+      console.error("BOOTSTRAP ERROR:", err);
+      return res.status(500).json({
+        error: "Function bootstrap failed",
+        message: err.message,
+        stack: err.stack?.split("\n").slice(0, 10),
+      });
     }
   }
-  next();
-});
 
-// Error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  console.error("Request error:", err);
-  res.status(status).json({ message });
-});
-
-// Serve static files in production
-serveStatic(app);
-
-log("Serverless function initialized");
-
-// Export the Express app for Vercel
-export default app;
+  return _app(req, res);
+}
