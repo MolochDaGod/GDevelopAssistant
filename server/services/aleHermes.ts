@@ -23,7 +23,7 @@ import {
   type InsertStorageAuditLog,
   type UserObject,
   type UserStorageQuota
-} from "@shared/schema";
+} from "../../shared/schema";
 import { eq, and, like, desc, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { Readable } from "stream";

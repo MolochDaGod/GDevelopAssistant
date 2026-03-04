@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { characters } from "@shared/schema";
+import { characters } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 import { isDatabaseConfigured } from "../db";
 import {
@@ -9,12 +9,12 @@ import {
   WCS_PAGES,
   GRUDACHAIN_API,
   type GrudaWarsStatus,
-} from "@shared/grudachain";
+} from "../../shared/grudachain";
 import {
   GRUDA_WARS_HEROES,
   heroToCharacterInsert,
   type GrudaWarsHero,
-} from "@shared/grudaWarsHeroes";
+} from "../../shared/grudaWarsHeroes";
 
 export function registerGrudaWarsRoutes(app: Express) {
   // ─── GET /api/gruda-wars/heroes ───

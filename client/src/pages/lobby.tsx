@@ -3,6 +3,8 @@ import { Link } from 'wouter';
 import { io, Socket } from 'socket.io-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+// Colyseus lobby hook — enable by setting VITE_USE_COLYSEUS=true
+// import { useColyseusLobby } from '@/hooks/useColyseusLobby';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,7 +1,7 @@
 // Warcraft 3-inspired Medieval RTS Game Mode Templates
 // Medieval Warfare (PvP) and Grudge Wars (Campaign)
 
-import type { GDevelopTools } from "@shared/schema";
+import type { GDevelopTools } from "../shared/schema";
 
 export interface GameModeTemplate {
   name: string;

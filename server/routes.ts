@@ -67,7 +67,7 @@ import {
   insertMmoWorldSchema,
   insertMmoCharacterSchema,
   type MmoCharacter
-} from "@shared/schema";
+} from "../shared/schema";
 import OpenAI from "openai";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -1086,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rts/templates/:templateName", async (req, res) => {
     try {
       const { gameModeTemplates } = await import("./rtsGameModeTemplates");
-      const { gdevelopToolsSchema } = await import("@shared/schema");
+const { gdevelopToolsSchema } = await import("../shared/schema");
       const templateName = req.params.templateName as "medievalWarfarePVP" | "grudgeWarsCampaign";
       const template = gameModeTemplates[templateName];
       

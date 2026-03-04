@@ -1,7 +1,7 @@
 import { type Express } from "express";
 import { verifyAuthToken, requireRegistered } from "../middleware/auth";
 import { db } from "../db";
-import { users, playerProfiles, playerWallets, playerCharacters } from "@shared/schema";
+import { users, playerProfiles, playerWallets, playerCharacters } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 
 export function registerUserRoutes(app: Express) {

@@ -50,7 +50,7 @@ services:
       - gdevelop-network
     command: node src/ai-agents/index.js
 
-  # Game Server Service
+  # Game Server Service (legacy Socket.IO)
   game-server:
     build: .
     container_name: gdevelop-game-server
@@ -70,6 +70,32 @@ services:
     networks:
       - gdevelop-network
     command: node src/game-server/index.js
+
+  # Colyseus Game Server (WCS rooms: lobby, gruda-wars, rts-battle)
+  colyseus:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grudge-colyseus
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - COLYSEUS_PORT=2567
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+    ports:
+      - "2567:2567"
+    depends_on:
+      - redis
+    networks:
+      - gdevelop-network
+    command: node dist/server/colyseus/index.js
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2567/colyseus/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # Cloud Storage Service
   cloud-storage:

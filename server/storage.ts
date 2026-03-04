@@ -80,7 +80,7 @@ import {
   viewportAssets,
   savedCharacters,
   unifiedAssets,
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, sql, and } from "drizzle-orm";
 import { THREEJS_EXAMPLES, ASSET_TYPES } from "./threejsExamples";
