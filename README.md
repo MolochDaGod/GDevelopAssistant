@@ -6,8 +6,8 @@
 
 GDevelop Assistant (GGE) is a full-stack web application that serves as the primary development and gameplay hub for Grudge Warlords. It provides crafting systems, character management, AI-powered sprite generation, GRUDA Wars heroes, and an admin dashboard — all backed by a PostgreSQL database and authenticated via the Grudge Auth Gateway.
 
-**Live**: Deployed on [Vercel](https://vercel.com)  
-**Auth**: [auth-gateway-flax.vercel.app](https://auth-gateway-flax.vercel.app) (Grudge ID SSO)
+**Live**: [gdevelop-assistant.vercel.app](https://gdevelop-assistant.vercel.app)  
+**Auth**: Auto-guest on first visit; full auth via [auth-gateway-flax.vercel.app](https://auth-gateway-flax.vercel.app) (Grudge ID SSO)
 
 ## Tech Stack
 
@@ -89,7 +89,14 @@ JWT_SECRET=your-jwt-secret          # JWT signing secret (shared with auth-gatew
 
 ## Deployment
 
-The app deploys to **Vercel** automatically on push to `main`. The `vercel.json` config routes `/api/*` to the Express serverless function and serves the Vite build as static files.
+The Vite client builds to `dist/public/` and deploys to **Vercel** as static files. The Express backend runs in dev mode only (`npm run dev`) — it is not deployed to Vercel serverless.
+
+Only `api/health.ts` is deployed as a Vercel serverless function. The SPA catch-all rewrite in `vercel.json` serves `index.html` for all non-API routes.
+
+```bash
+npm run build:vercel       # Build client
+vercel --prod --yes        # Deploy to production
+```
 
 ## Related Projects
 
