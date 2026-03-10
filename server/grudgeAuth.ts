@@ -194,62 +194,82 @@ export function setupGrudgeAuth(app: Express) {
 
   // ─── Proxy login to auth-gateway ───
   app.post("/api/login", async (req, res) => {
-    const result = await gatewayProxy("login", "POST", req.body);
-    if (result.ok) {
-      // Upsert local account on successful login (not new registration)
-      await upsertLocalAccount(result.data, false);
+    try {
+      const result = await gatewayProxy("login", "POST", req.body);
+      if (result.ok) {
+        await upsertLocalAccount(result.data, false);
+      }
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/login] crash:", err.message, err.stack);
+      res.status(500).json({ error: "Login failed", details: err.message });
     }
-    res.status(result.status).json(result.data);
   });
 
   // ─── Proxy register to auth-gateway ───
   app.post("/api/register", async (req, res) => {
-    const result = await gatewayProxy("register", "POST", req.body);
-    if (result.ok) {
-      // New registration → upsert account + create Crossmint wallet
-      const acct = await upsertLocalAccount(result.data, true);
-      if (acct?.walletAddress) {
-        result.data.walletAddress = acct.walletAddress;
+    try {
+      const result = await gatewayProxy("register", "POST", req.body);
+      if (result.ok) {
+        const acct = await upsertLocalAccount(result.data, true);
+        if (acct?.walletAddress) {
+          result.data.walletAddress = acct.walletAddress;
+        }
       }
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/register] crash:", err.message, err.stack);
+      res.status(500).json({ error: "Registration failed", details: err.message });
     }
-    res.status(result.status).json(result.data);
   });
 
   // ─── Proxy guest login to auth-gateway ───
   app.post("/api/guest", async (req, res) => {
-    const result = await gatewayProxy("guest", "POST", req.body);
-    if (result.ok) {
-      // Upsert guest account (isGuest = true)
-      await upsertLocalAccount({ ...result.data, isGuest: true }, true);
+    try {
+      const result = await gatewayProxy("guest", "POST", req.body);
+      if (result.ok) {
+        await upsertLocalAccount({ ...result.data, isGuest: true }, true);
+      }
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/guest] crash:", err.message, err.stack);
+      res.status(500).json({ error: "Guest login failed", details: err.message });
     }
-    res.status(result.status).json(result.data);
   });
 
   // ─── Puter sign-in → auth-gateway /api/puter → JWT ───
-  // Client calls this after puter.auth.signIn() to get a Grudge JWT
   app.post("/api/auth/puter", async (req, res) => {
-    const { puterUuid, puterUsername } = req.body;
-    if (!puterUuid) {
-      return res.status(400).json({ error: "puterUuid is required" });
+    try {
+      const { puterUuid, puterUsername } = req.body || {};
+      if (!puterUuid) {
+        return res.status(400).json({ error: "puterUuid is required" });
+      }
+      const result = await gatewayProxy("puter", "POST", { puterUuid, puterUsername });
+      if (result.ok) {
+        await upsertLocalAccount({ ...result.data, puterUuid, puterUsername }, true);
+      }
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/auth/puter] crash:", err.message, err.stack);
+      res.status(500).json({ error: "Puter auth failed", details: err.message });
     }
-    const result = await gatewayProxy("puter", "POST", { puterUuid, puterUsername });
-    if (result.ok) {
-      // Upsert account with Puter identity
-      await upsertLocalAccount({ ...result.data, puterUuid, puterUsername }, true);
-    }
-    res.status(result.status).json(result.data);
   });
 
   // ─── Verify token (proxy to auth-gateway /api/verify) ───
   app.get("/api/auth/verify", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: "No token provided" });
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: "No token provided" });
+      }
+      const result = await gatewayProxy("verify", "GET", undefined, {
+        Authorization: authHeader,
+      });
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[GET /api/auth/verify] crash:", err.message, err.stack);
+      res.status(500).json({ error: "Token verification failed", details: err.message });
     }
-    const result = await gatewayProxy("verify", "GET", undefined, {
-      Authorization: authHeader,
-    });
-    res.status(result.status).json(result.data);
   });
 
   // ─── Get current user (JWT-verified locally) ───
@@ -266,57 +286,86 @@ export function setupGrudgeAuth(app: Express) {
 
   // ─── Full profile (enriched from auth-gateway /api/verify) ───
   app.get("/api/auth/me", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: "Not authenticated" });
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const result = await gatewayProxy("verify", "GET", undefined, {
+        Authorization: authHeader,
+      });
+      if (!result.ok) {
+        return res.status(result.status).json(result.data);
+      }
+      res.json(result.data);
+    } catch (err: any) {
+      console.error("[GET /api/auth/me] crash:", err.message);
+      res.status(500).json({ error: "Profile fetch failed" });
     }
-    const result = await gatewayProxy("verify", "GET", undefined, {
-      Authorization: authHeader,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json(result.data);
-    }
-    res.json(result.data);
   });
 
   // ─── Discord OAuth — get URL or handle callback ───
   app.get("/api/auth/discord", async (req, res) => {
-    // Pass the return URL as state so Discord redirects back through the gateway
-    const state = req.query.state || req.query.return || '';
-    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
-    const result = await gatewayProxy(`discord${qs}`, "GET");
-    res.status(result.status).json(result.data);
+    try {
+      const state = req.query.state || req.query.return || '';
+      const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+      const result = await gatewayProxy(`discord${qs}`, "GET");
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[GET /api/auth/discord] crash:", err.message);
+      res.status(500).json({ error: "Discord auth failed" });
+    }
   });
 
   // ─── GitHub OAuth — get URL or handle callback ───
   app.get("/api/auth/github", async (req, res) => {
-    const state = req.query.state || req.query.return || '';
-    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
-    const result = await gatewayProxy(`github${qs}`, "GET");
-    res.status(result.status).json(result.data);
+    try {
+      const state = req.query.state || req.query.return || '';
+      const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+      const result = await gatewayProxy(`github${qs}`, "GET");
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[GET /api/auth/github] crash:", err.message);
+      res.status(500).json({ error: "GitHub auth failed" });
+    }
   });
 
   // ─── Google OAuth — get URL or handle callback ───
   app.get("/api/auth/google", async (req, res) => {
-    const state = req.query.state || req.query.return || '';
-    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
-    const result = await gatewayProxy(`google${qs}`, "GET");
-    res.status(result.status).json(result.data);
+    try {
+      const state = req.query.state || req.query.return || '';
+      const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+      const result = await gatewayProxy(`google${qs}`, "GET");
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[GET /api/auth/google] crash:", err.message);
+      res.status(500).json({ error: "Google auth failed" });
+    }
   });
 
   // ─── Phone (Twilio SMS) — send code / verify code ───
   app.post("/api/auth/phone", async (req, res) => {
-    const result = await gatewayProxy("phone", "POST", req.body);
-    res.status(result.status).json(result.data);
+    try {
+      const result = await gatewayProxy("phone", "POST", req.body);
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/auth/phone] crash:", err.message);
+      res.status(500).json({ error: "Phone auth failed" });
+    }
   });
 
   // ─── Wallet connect — link or login via Solana wallet ───
   app.post("/api/auth/wallet", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    const result = await gatewayProxy("connect-wallet", "POST", req.body, {
-      ...(authHeader ? { Authorization: authHeader } : {}),
-    });
-    res.status(result.status).json(result.data);
+    try {
+      const authHeader = req.headers.authorization;
+      const result = await gatewayProxy("connect-wallet", "POST", req.body, {
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      });
+      res.status(result.status).json(result.data);
+    } catch (err: any) {
+      console.error("[POST /api/auth/wallet] crash:", err.message);
+      res.status(500).json({ error: "Wallet auth failed" });
+    }
   });
 
   console.log("✅ Grudge Auth routes registered (gateway proxy mode)");

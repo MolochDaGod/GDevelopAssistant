@@ -84,7 +84,20 @@ setupGrudgeAuth(app);
 // ════════════════════════════════════════════
 // Health check
 // ════════════════════════════════════════════
-app.get("/api/health", (_req: Request, res: Response) => {
+app.get("/api/health", async (_req: Request, res: Response) => {
+  // Quick auth-gateway ping (non-blocking, 3s timeout)
+  let gatewayOk = false;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const gw = await fetch(
+      `${process.env.AUTH_GATEWAY_URL || "https://auth-gateway-flax.vercel.app"}/api/health`,
+      { signal: ctrl.signal },
+    );
+    clearTimeout(t);
+    gatewayOk = gw.ok;
+  } catch { /* unreachable */ }
+
   res.json({
     status: "healthy",
     service: "GDevelop Assistant (Vercel)",
@@ -92,8 +105,10 @@ app.get("/api/health", (_req: Request, res: Response) => {
     runtime: process.version,
     env: {
       hasDatabase: isDatabaseConfigured(),
+      hasSessionSecret: !!process.env.SESSION_SECRET,
       hasXaiKey: !!process.env.XAI_API_KEY,
       hasMeshyKey: !!process.env.MESHY_API_KEY,
+      authGateway: gatewayOk ? "reachable" : "unreachable",
       nodeEnv: process.env.NODE_ENV || "not-set",
     },
   });
