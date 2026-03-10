@@ -1,14 +1,19 @@
 /**
  * Grudge JWT Verification Middleware
- * Hub-and-spoke model: all tokens originate from auth-gateway-flax.vercel.app
+ * Hub-and-spoke model: all tokens originate from auth-gateway (configurable via AUTH_GATEWAY_URL env)
  * This middleware verifies them locally (fast) or via auth-gateway (fallback).
  */
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const AUTH_GATEWAY = "https://auth-gateway-flax.vercel.app";
-const SESSION_SECRET = process.env.SESSION_SECRET || "grudge-warlords-secret-key";
+const AUTH_GATEWAY = process.env.AUTH_GATEWAY_URL || "https://auth-gateway-flax.vercel.app";
+
+// SESSION_SECRET MUST match auth-gateway. If unset, local verify always fails → remote fallback.
+const SESSION_SECRET = process.env.SESSION_SECRET || "";
+if (!process.env.SESSION_SECRET) {
+  console.warn("⚠️  SESSION_SECRET not set — JWT local verification disabled, all requests will hit auth-gateway remotely");
+}
 
 /** Shape of the JWT payload issued by auth-gateway */
 export interface GrudgeUser {

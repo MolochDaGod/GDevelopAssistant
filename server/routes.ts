@@ -203,14 +203,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for autoscale monitoring
   app.get("/health", async (req, res) => {
     try {
-      // Check database connection
+      // Check database connection (Neon PostgreSQL — source of truth)
       const dbHealthy = await db.select().from(users).limit(1).then(() => true).catch(() => false);
       
-      // Check object storage
-      const objectStorageService = new ObjectStorageService();
-      const storageHealthy = objectStorageService.getPublicObjectSearchPaths().length > 0;
-      
-      const status = dbHealthy && storageHealthy ? "healthy" : "degraded";
+      const status = dbHealthy ? "healthy" : "degraded";
       const statusCode = status === "healthy" ? 200 : 503;
       
       res.status(statusCode).json({
@@ -219,7 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uptime: process.uptime(),
         checks: {
           database: dbHealthy ? "connected" : "disconnected",
-          objectStorage: storageHealthy ? "available" : "unavailable"
+          // Puter KV/FS is client-side only — no server health check needed
+          clientStorage: "puter-kv (client-side)",
         }
       });
     } catch (error) {

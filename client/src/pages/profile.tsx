@@ -1,5 +1,6 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,15 +20,15 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
 
-  const { data: profile, isLoading: profileLoading } = useQuery<PlayerProfile>({
-    queryKey: ["/api/players/me"],
-    enabled: isAuthenticated,
-    retry: false,
-  });
+  const { data: profile, isLoading: profileLoading } = useCachedQuery<PlayerProfile>(
+    ["/api/players/me"],
+    { ttlMs: 120_000, enabled: isAuthenticated },
+  );
 
-  const { data: levels } = useQuery<LevelRequirement[]>({
-    queryKey: ["/api/levels"],
-  });
+  const { data: levels } = useCachedQuery<LevelRequirement[]>(
+    ["/api/levels"],
+    { ttlMs: 600_000 },
+  );
 
   const createProfileMutation = useMutation({
     mutationFn: async (data: { displayName: string }) => {

@@ -545,10 +545,10 @@ export default function AdminStoragePage() {
                       >
                         <CardContent className="p-3 flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${
-                            item.type === "folder" ? "bg-amber-500/20" : "bg-blue-500/20"
+                            item.type === "folder" ? "bg-amber-500/20" : "bg-amber-500/20"
                           }`}>
                             <IconComponent className={`h-5 w-5 ${
-                              item.type === "folder" ? "text-amber-500" : "text-blue-500"
+                              item.type === "folder" ? "text-amber-500" : "text-amber-500"
                             }`} />
                           </div>
                           <div className="flex-1 min-w-0">

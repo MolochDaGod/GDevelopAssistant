@@ -198,9 +198,10 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-2">
         <Link href="/" className="block hover-elevate rounded-md overflow-hidden">
-          <div className="relative w-full rounded-md overflow-hidden bg-gradient-to-r from-purple-900 to-blue-900 p-4">
-            <div className="text-xl font-bold text-white text-center" data-testid="img-logo">
-              Grudge<span className="text-purple-300">Develop</span>
+          <div className="relative w-full rounded-md overflow-hidden bg-gradient-to-r from-yellow-900/80 via-amber-800/60 to-yellow-900/80 border border-yellow-700/30 p-4">
+            <div className="text-xl font-bold text-center" style={{ fontFamily: 'Cinzel, serif' }} data-testid="img-logo">
+              <span className="text-yellow-400">GRUDGE</span>
+              <span className="text-yellow-200/70 text-sm ml-1">Warlords</span>
             </div>
           </div>
         </Link>
@@ -221,7 +222,7 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span className="flex-1">{item.title}</span>
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-red-500/20 text-red-400 border-0">
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-yellow-500/20 text-yellow-400 border-0">
                           {item.badge}
                         </Badge>
                       )}
@@ -251,7 +252,7 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span className="flex-1">{item.title}</span>
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-blue-500/20 text-blue-400 border-0">
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-400 border-0">
                           {item.badge}
                         </Badge>
                       )}

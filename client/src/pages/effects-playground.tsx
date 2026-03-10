@@ -1187,7 +1187,7 @@ export default function EffectsPlayground() {
           </Link>
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-500" />
+              <Sparkles className="h-5 w-5 text-amber-500" />
               Effects Playground
             </h1>
             <p className="text-xs text-muted-foreground">Create stunning visual effects with glow, particles, and shaders</p>

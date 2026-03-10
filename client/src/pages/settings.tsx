@@ -1,5 +1,6 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
+import { useCachedMutation } from "@/hooks/useCachedMutation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,11 +90,10 @@ export default function SettingsPage() {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(defaultNotificationSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading: settingsLoading } = useQuery<UserSettings>({
-    queryKey: ["/api/settings"],
-    enabled: isAuthenticated,
-    retry: false,
-  });
+  const { data: settings, isLoading: settingsLoading } = useCachedQuery<UserSettings>(
+    ["/api/settings"],
+    { ttlMs: 300_000, enabled: isAuthenticated },
+  );
 
   useEffect(() => {
     if (settings) {
@@ -109,13 +109,14 @@ export default function SettingsPage() {
     }
   }, [settings]);
 
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (data: Partial<UserSettings>) => {
+  const saveSettingsMutation = useCachedMutation<UserSettings, Partial<UserSettings>>({
+    mutationFn: async (data) => {
       const response = await apiRequest("PUT", "/api/settings", data);
       return response.json();
     },
+    cacheKey: ["/api/settings"],
+    ttlMs: 300_000,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       setHasChanges(false);
       toast({
         title: "Settings Saved",

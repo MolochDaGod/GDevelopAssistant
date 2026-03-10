@@ -66,7 +66,7 @@ export default function OnboardingPage() {
   const [puterConnecting, setPuterConnecting] = useState(false);
   const [dirsReady, setDirsReady] = useState(false);
 
-  const totalSteps = 3;
+  const totalSteps = 4; // intro + 3 original steps
   const progressPercent = ((step + 1) / totalSteps) * 100;
 
   // If already onboarded and navigated here manually, let them through
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0a0a0f] via-yellow-950/20 to-[#0a0a0f] p-4">
       {/* Progress */}
       <div className="w-full max-w-2xl mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -113,12 +113,30 @@ export default function OnboardingPage() {
 
       {/* Step Content */}
       <div className="w-full max-w-2xl">
-        {/* ═══ STEP 1: Welcome ═══ */}
+        {/* ═══ STEP 0: Intro GIF ═══ */}
         {step === 0 && (
-          <Card className="border-purple-500/30 bg-card/80 backdrop-blur">
+          <div className="flex flex-col items-center justify-center gap-6">
+            <img
+              src="/assets/intro.gif"
+              alt="Welcome to Grudge Studio"
+              className="w-full max-w-xl rounded-xl shadow-2xl shadow-yellow-900/40 border border-yellow-600/20"
+            />
+            <Button
+              onClick={() => setStep(1)}
+              size="lg"
+              className="gap-2 text-lg px-8 bg-gradient-to-r from-yellow-700 to-amber-600 hover:from-yellow-800 hover:to-amber-700 text-black font-semibold"
+            >
+              Continue <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
+        {/* ═══ STEP 1: Welcome ═══ */}
+        {step === 1 && (
+          <Card className="border-yellow-600/30 bg-card/80 backdrop-blur">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                <Rocket className="w-10 h-10 text-white" />
+              <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-yellow-700 to-amber-600 flex items-center justify-center">
+                <Rocket className="w-10 h-10 text-black" />
               </div>
               <CardTitle className="text-3xl">
                 Welcome{authData?.username ? `, ${authData.username}` : ""}!
@@ -130,12 +148,12 @@ export default function OnboardingPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="text-center p-4 rounded-lg bg-accent/30">
-                  <Hammer className="w-8 h-8 mx-auto mb-2 text-orange-400" />
+                  <Hammer className="w-8 h-8 mx-auto mb-2 text-yellow-400" />
                   <p className="font-semibold text-sm">GDevelop Tools</p>
                   <p className="text-xs text-muted-foreground mt-1">Map editors, character builders, AI assistants</p>
                 </div>
                 <div className="text-center p-4 rounded-lg bg-accent/30">
-                  <Gamepad2 className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                  <Gamepad2 className="w-8 h-8 mx-auto mb-2 text-amber-400" />
                   <p className="font-semibold text-sm">GGE Launchers</p>
                   <p className="text-xs text-muted-foreground mt-1">Play RPGs, racers, FPS, RTS and more</p>
                 </div>
@@ -150,8 +168,11 @@ export default function OnboardingPage() {
                 We'll set up your cloud storage and show you around the platform. This only takes a minute.
               </p>
 
-              <div className="flex justify-end">
-                <Button onClick={() => setStep(1)} className="gap-2">
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(0)} className="gap-2">
+                  <ChevronLeft className="w-4 h-4" /> Back
+                </Button>
+                <Button onClick={() => setStep(2)} className="gap-2">
                   Get Started <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -160,7 +181,7 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══ STEP 2: Cloud Storage ═══ */}
-        {step === 1 && (
+        {step === 2 && (
           <Card className="border-green-500/30 bg-card/80 backdrop-blur">
             <CardHeader className="text-center pb-2">
               <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center">
@@ -238,10 +259,10 @@ export default function OnboardingPage() {
               )}
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(0)} className="gap-2">
+                <Button variant="outline" onClick={() => setStep(1)} className="gap-2">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </Button>
-                <Button onClick={() => setStep(2)} className="gap-2">
+                <Button onClick={() => setStep(3)} className="gap-2">
                   {isSignedIn ? "Continue" : "Skip for Now"} <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -250,11 +271,11 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══ STEP 3: Launchers ═══ */}
-        {step === 2 && (
-          <Card className="border-blue-500/30 bg-card/80 backdrop-blur">
+        {step === 3 && (
+          <Card className="border-yellow-600/30 bg-card/80 backdrop-blur">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-                <Sparkles className="w-10 h-10 text-white" />
+              <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-yellow-700 to-amber-600 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-black" />
               </div>
               <CardTitle className="text-2xl">Your Launchers</CardTitle>
               <CardDescription className="text-base mt-2">
@@ -264,7 +285,7 @@ export default function OnboardingPage() {
             <CardContent className="space-y-6">
               {/* GDevelop Tools */}
               <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-orange-400">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-yellow-400">
                   <Hammer className="w-4 h-4" />
                   GDevelop Builder Tools
                 </h4>
@@ -280,7 +301,7 @@ export default function OnboardingPage() {
 
               {/* GGE Game Launchers */}
               <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-blue-400">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-amber-400">
                   <Gamepad2 className="w-4 h-4" />
                   GGE Game Launchers
                 </h4>
@@ -298,10 +319,10 @@ export default function OnboardingPage() {
               </div>
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)} className="gap-2">
+                <Button variant="outline" onClick={() => setStep(2)} className="gap-2">
                   <ChevronLeft className="w-4 h-4" /> Back
                 </Button>
-                <Button onClick={handleComplete} className="gap-2 bg-green-600 hover:bg-green-700">
+                <Button onClick={handleComplete} className="gap-2 bg-gradient-to-r from-yellow-700 to-amber-600 hover:from-yellow-800 hover:to-amber-700 text-black font-semibold">
                   <CheckCircle2 className="w-4 h-4" /> Enter Battle Station
                 </Button>
               </div>

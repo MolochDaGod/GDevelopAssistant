@@ -9,10 +9,10 @@
  *  3. Auth-gateway redirect (external login page) → JWT via URL param
  *  4. Guest login → auth-gateway /api/guest → JWT
  *
- * Source of truth: auth-gateway-flax.vercel.app (shared `accounts` table)
+ * Source of truth: local /api proxy → auth-gateway (shared `accounts` table)
  */
 
-const AUTH_GATEWAY = 'https://auth-gateway-flax.vercel.app';
+// Auth is now served in-app at /auth — no external gateway redirect needed
 
 // ── localStorage keys (shared across all Grudge Studio apps) ──
 const KEYS = {
@@ -88,16 +88,16 @@ export function hasAuthToken(): boolean {
   return !!localStorage.getItem(KEYS.token);
 }
 
-/** Redirect to auth-gateway login page. */
+/** Redirect to in-app auth page. */
 export function redirectToLogin(customReturnUrl?: string) {
-  const returnUrl = encodeURIComponent(customReturnUrl || window.location.href);
-  window.location.href = `${AUTH_GATEWAY}?return=${returnUrl}`;
+  const returnUrl = encodeURIComponent(customReturnUrl || window.location.pathname);
+  window.location.href = `/auth?return=${returnUrl}`;
 }
 
-/** Logout — clears tokens and redirects. */
+/** Logout — clears tokens and redirects to auth page. */
 export function logout() {
   clearAuth();
-  redirectToLogin();
+  window.location.href = '/auth';
 }
 
 /** Logout without redirect (for switching accounts, etc.) */
@@ -134,6 +134,39 @@ export async function apiCall<T = any>(
   }
 
   return response.json();
+}
+
+// ── Callback capture (after auth-gateway redirect) ──
+
+/**
+ * Capture auth data from URL params after auth-gateway redirect.
+ * The auth-gateway redirects back with ?token=...&grudgeId=...&userId=...&username=...
+ * This must be called BEFORE getAuthData() on page load.
+ * Returns true if auth data was captured from the URL.
+ */
+export function captureAuthCallback(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  if (!token) return false;
+
+  // Store everything the gateway sent
+  storeAuth({
+    token,
+    grudgeId: params.get('grudgeId') || undefined,
+    userId: params.get('userId') || undefined,
+    username: params.get('username') || undefined,
+    displayName: params.get('displayName') || undefined,
+  });
+
+  // Strip auth params from URL so they don't leak into bookmarks/history
+  const cleanUrl = new URL(window.location.href);
+  ['token', 'grudgeId', 'userId', 'username', 'displayName', 'provider', 'isNew'].forEach(
+    (k) => cleanUrl.searchParams.delete(k),
+  );
+  window.history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+
+  return true;
 }
 
 // ── Auth flows ──
@@ -187,6 +220,58 @@ export async function loginAsGuest(deviceId?: string) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId: id }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth(data);
+  }
+  return data;
+}
+
+/** Initiate Google OAuth — returns { url } to redirect to. */
+export async function loginWithGoogle(returnUrl?: string) {
+  const state = encodeURIComponent(returnUrl || window.location.href);
+  const res = await fetch(`/api/auth/google?state=${state}`);
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url;
+  }
+  return data;
+}
+
+/** Send phone verification code via SMS. */
+export async function sendPhoneCode(phone: string) {
+  const res = await fetch('/api/auth/phone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, action: 'send' }),
+  });
+  return res.json();
+}
+
+/** Verify phone code and get JWT. */
+export async function verifyPhoneCode(phone: string, code: string) {
+  const res = await fetch('/api/auth/phone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, code, action: 'verify' }),
+  });
+  const data = await res.json();
+  if (data.success && data.token) {
+    storeAuth(data);
+  }
+  return data;
+}
+
+/** Connect a Solana wallet (login or link to existing account). */
+export async function loginWithWallet(walletAddress: string, walletType = 'solana') {
+  const res = await fetch('/api/auth/wallet', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(hasAuthToken() ? { Authorization: `Bearer ${localStorage.getItem(KEYS.token)}` } : {}),
+    },
+    body: JSON.stringify({ walletAddress, walletType }),
   });
   const data = await res.json();
   if (data.success && data.token) {

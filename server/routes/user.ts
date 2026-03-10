@@ -1,5 +1,5 @@
 import { type Express } from "express";
-import { verifyAuthToken, requireRegistered } from "../middleware/auth";
+import { requireAuth } from "../middleware/grudgeJwt";
 import { db } from "../db";
 import { users, playerProfiles, playerWallets, playerCharacters } from "../../shared/schema";
 import { eq } from "drizzle-orm";
@@ -9,17 +9,19 @@ export function registerUserRoutes(app: Express) {
    * GET /api/user/profile
    * Get current user's profile with game data
    */
-  app.get("/api/user/profile", verifyAuthToken, async (req, res) => {
+  app.get("/api/user/profile", requireAuth, async (req, res) => {
     try {
-      if (!req.user) {
+      if (!req.grudgeUser) {
         return res.status(401).json({ error: "Not authenticated" });
       }
+      // Map grudgeUser to the user shape this route expects
+      const reqUser = { id: req.grudgeUser.userId, username: req.grudgeUser.username, isGuest: req.grudgeUser.isGuest || false, isPremium: req.grudgeUser.isPremium || false };
 
       // Get user data
       const userData = await db
         .select()
         .from(users)
-        .where(eq(users.id, req.user.id))
+        .where(eq(users.id, reqUser.id))
         .limit(1);
 
       if (userData.length === 0) {
@@ -30,7 +32,7 @@ export function registerUserRoutes(app: Express) {
       let profile = await db
         .select()
         .from(playerProfiles)
-        .where(eq(playerProfiles.userId, req.user.id))
+        .where(eq(playerProfiles.userId, reqUser.id))
         .limit(1);
 
       if (profile.length === 0) {
@@ -38,7 +40,7 @@ export function registerUserRoutes(app: Express) {
         const newProfile = await db
           .insert(playerProfiles)
           .values({
-            userId: req.user.id,
+            userId: reqUser.id,
             displayName: userData[0].username,
             level: 1,
             xp: 0,
@@ -71,8 +73,8 @@ export function registerUserRoutes(app: Express) {
           lastName: userData[0].lastName,
           profileImageUrl: userData[0].profileImageUrl,
           createdAt: userData[0].createdAt,
-          isGuest: req.user.isGuest,
-          isPremium: req.user.isPremium,
+          isGuest: reqUser.isGuest,
+          isPremium: reqUser.isPremium,
         },
         profile: {
           id: profile[0].id,
@@ -103,11 +105,12 @@ export function registerUserRoutes(app: Express) {
    * PATCH /api/user/profile
    * Update user profile
    */
-  app.patch("/api/user/profile", verifyAuthToken, async (req, res) => {
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
     try {
-      if (!req.user) {
+      if (!req.grudgeUser) {
         return res.status(401).json({ error: "Not authenticated" });
       }
+      const uid = req.grudgeUser.userId;
 
       const { displayName, firstName, lastName } = req.body;
 
@@ -120,7 +123,7 @@ export function registerUserRoutes(app: Express) {
             lastName: lastName || undefined,
             updatedAt: new Date(),
           })
-          .where(eq(users.id, req.user.id));
+          .where(eq(users.id, uid));
       }
 
       // Update player profile displayName
@@ -128,7 +131,7 @@ export function registerUserRoutes(app: Express) {
         const profile = await db
           .select()
           .from(playerProfiles)
-          .where(eq(playerProfiles.userId, req.user.id))
+          .where(eq(playerProfiles.userId, uid))
           .limit(1);
 
         if (profile.length > 0) {
@@ -153,9 +156,9 @@ export function registerUserRoutes(app: Express) {
    * GET /api/user/characters
    * Get user's owned characters
    */
-  app.get("/api/user/characters", verifyAuthToken, async (req, res) => {
+  app.get("/api/user/characters", requireAuth, async (req, res) => {
     try {
-      if (!req.user) {
+      if (!req.grudgeUser) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
@@ -163,7 +166,7 @@ export function registerUserRoutes(app: Express) {
       const profile = await db
         .select()
         .from(playerProfiles)
-        .where(eq(playerProfiles.userId, req.user.id))
+        .where(eq(playerProfiles.userId, req.grudgeUser.userId))
         .limit(1);
 
       if (profile.length === 0) {
@@ -189,9 +192,9 @@ export function registerUserRoutes(app: Express) {
    * GET /api/user/stats
    * Get user's game statistics
    */
-  app.get("/api/user/stats", verifyAuthToken, async (req, res) => {
+  app.get("/api/user/stats", requireAuth, async (req, res) => {
     try {
-      if (!req.user) {
+      if (!req.grudgeUser) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
@@ -199,7 +202,7 @@ export function registerUserRoutes(app: Express) {
       const profile = await db
         .select()
         .from(playerProfiles)
-        .where(eq(playerProfiles.userId, req.user.id))
+        .where(eq(playerProfiles.userId, req.grudgeUser.userId))
         .limit(1);
 
       if (profile.length === 0) {
@@ -232,7 +235,7 @@ export function registerUserRoutes(app: Express) {
    * POST /api/user/upgrade-guest
    * Upgrade guest account to registered (requires being logged into auth-gateway)
    */
-  app.post("/api/user/upgrade-guest", requireRegistered, async (req, res) => {
+  app.post("/api/user/upgrade-guest", requireAuth, async (req, res) => {
     // This endpoint only allows non-guest users
     // The middleware will reject guests automatically
     return res.status(200).json({

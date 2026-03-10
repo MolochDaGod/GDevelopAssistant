@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +16,15 @@ const CATEGORY_ICONS: Record<string, any> = {
 export default function AchievementsPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
-  const { data: achievements, isLoading: achievementsLoading } = useQuery<Achievement[]>({
-    queryKey: ["/api/achievements"],
-  });
+  const { data: achievements, isLoading: achievementsLoading } = useCachedQuery<Achievement[]>(
+    ["/api/achievements"],
+    { ttlMs: 600_000 },
+  );
 
-  const { data: playerAchievements } = useQuery<PlayerAchievement[]>({
-    queryKey: ["/api/players/me/achievements"],
-    enabled: isAuthenticated,
-  });
+  const { data: playerAchievements } = useCachedQuery<PlayerAchievement[]>(
+    ["/api/players/me/achievements"],
+    { ttlMs: 60_000, enabled: isAuthenticated },
+  );
 
   const getPlayerProgress = (achievementId: string) => {
     return playerAchievements?.find(pa => pa.achievementId === achievementId);

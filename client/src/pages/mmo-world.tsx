@@ -3,9 +3,29 @@ import Phaser from "phaser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Sword, Shield, Heart, Coins, Star, Flame, Snowflake, Zap, Cross, DoorOpen, BookOpen, AlertCircle } from "lucide-react";
+import { ArrowLeft, Sword, Shield, Heart, Coins, Star, Flame, Snowflake, Zap, Cross, DoorOpen, BookOpen, AlertCircle, Package } from "lucide-react";
 import { Link } from "wouter";
 import { mmoApi } from "@/lib/gameApi";
+import { TelegraphManager } from "@/lib/mmo-indicators";
+import {
+  deriveCombatStats,
+  calcPhysicalDamage,
+  calcSpellDamage,
+  rollCrit,
+  rollDodge,
+  calcCritMultiplier,
+  abilityToSpell,
+  generateLootDrop,
+  createGatheringNodes,
+  TIER_COLORS,
+  type DerivedStats,
+  type MMOSpell,
+  type InventoryItem as MMOInventoryItem,
+  type GatheringNode,
+} from "@/lib/mmo-systems";
+import { GRUDA_WARS_HEROES } from "../../../shared/grudaWarsHeroes";
+import type { WCSHeroAttributes } from "../../../shared/grudachain";
+import type { GrudaWarsHero } from "../../../shared/grudaWarsHeroes";
 
 const WORLD_WIDTH = 4800;
 const WORLD_HEIGHT = 3600;
@@ -14,6 +34,7 @@ const TILE_SIZE = 32;
 type Biome = "forest" | "desert" | "snow" | "swamp" | "plains";
 type DifficultyZone = "safe" | "easy" | "medium" | "hard";
 
+/** Spell type now uses MMOSpell from mmo-systems (mapped from hero abilities) */
 interface Spell {
   id: string;
   name: string;
@@ -26,12 +47,24 @@ interface Spell {
   icon: string;
 }
 
-const SPELLS: Spell[] = [
+/** Default spells — overridden when a hero is selected */
+const DEFAULT_SPELLS: Spell[] = [
   { id: "fireball", name: "Fireball", key: "1", manaCost: 15, cooldown: 1500, damage: 25, range: 280, color: 0xff4400, icon: "fire" },
   { id: "iceShard", name: "Ice Shard", key: "2", manaCost: 12, cooldown: 1000, damage: 18, range: 250, color: 0x00ccff, icon: "ice" },
   { id: "lightning", name: "Lightning", key: "3", manaCost: 20, cooldown: 2500, damage: 40, range: 320, color: 0xffff00, icon: "zap" },
   { id: "heal", name: "Heal", key: "4", manaCost: 25, cooldown: 4000, damage: -30, range: 0, color: 0x00ff88, icon: "heal" },
 ];
+
+/** Convert MMOSpell → scene Spell format */
+function mmoSpellToSceneSpell(s: MMOSpell): Spell {
+  let icon = "fire";
+  if (s.color === 0x00ccff) icon = "ice";
+  else if (s.color === 0xffff00) icon = "zap";
+  else if (s.isHeal || s.color === 0x00ff88) icon = "heal";
+  return { id: s.id, name: s.name, key: s.key, manaCost: s.manaCost, cooldown: s.cooldownMs, damage: s.damage, range: s.range, color: s.color, icon };
+}
+
+let SPELLS: Spell[] = [...DEFAULT_SPELLS];
 
 interface PlayerStats {
   health: number;
@@ -44,6 +77,11 @@ interface PlayerStats {
   gold: number;
   attack: number;
   defense: number;
+  // WCS 8-stat attributes (shared across games)
+  wcsAttributes?: WCSHeroAttributes;
+  derived?: DerivedStats;
+  heroName?: string;
+  classId?: string;
 }
 
 interface SpellCooldown {
@@ -98,9 +136,24 @@ class MMOScene extends Phaser.Scene {
   private currentZone: DifficultyZone = "safe";
   private mousePointer!: Phaser.Input.Pointer;
   private crosshair!: Phaser.GameObjects.Graphics;
+  private telegraphManager!: TelegraphManager;
+  private selectedHero: GrudaWarsHero | null = null;
+  private gatheringNodes: GatheringNode[] = [];
+  private spriteKeys: Map<string, boolean> = new Map();
 
   constructor() {
     super({ key: "MMOScene" });
+  }
+
+  /** Set the active hero (called before scene starts) */
+  setHero(hero: GrudaWarsHero) {
+    this.selectedHero = hero;
+    // Map hero abilities to scene spells
+    const heroSpells = hero.gdaAbilities.map((ability, i) => {
+      const mmoSpell = abilityToSpell(ability, i);
+      return mmoSpellToSceneSpell(mmoSpell);
+    });
+    SPELLS = heroSpells.length > 0 ? heroSpells : [...DEFAULT_SPELLS];
   }
 
   setCallbacks(
@@ -120,6 +173,7 @@ class MMOScene extends Phaser.Scene {
   }
 
   create() {
+    this.telegraphManager = new TelegraphManager(this);
     this.generateBiomeMap();
     this.generateZoneMap();
     this.createWorld();
@@ -132,9 +186,21 @@ class MMOScene extends Phaser.Scene {
     this.setupCamera();
     this.setupCollisions();
     this.createMinimap();
+    this.createGatheringNodes();
 
     this.loot = this.physics.add.group();
     this.enemyProjectiles = this.physics.add.group();
+
+    // Apply hero stats if a hero was selected
+    if (this.selectedHero) {
+      const derived = deriveCombatStats(this.selectedHero.wcsAttributes, this.selectedHero.level);
+      this.stats.maxHealth = derived.maxHp;
+      this.stats.health = derived.maxHp;
+      this.stats.maxMana = derived.maxMana;
+      this.stats.mana = derived.maxMana;
+      this.stats.attack = derived.physicalDamage;
+      this.stats.defense = derived.defense;
+    }
 
     this.physics.add.overlap(this.player, this.loot, (_player, lootItem) => {
       this.collectLoot(lootItem as Phaser.Physics.Arcade.Sprite);
@@ -163,6 +229,29 @@ class MMOScene extends Phaser.Scene {
 
     this.onGameStateChange?.(true, "safe");
     this.notifyStats();
+  }
+
+  /** Create gathering nodes in each biome zone */
+  createGatheringNodes() {
+    const biomes = ["forest", "desert", "snow", "swamp", "plains"];
+    for (const biome of biomes) {
+      const nodes = createGatheringNodes(biome, WORLD_WIDTH, WORLD_HEIGHT, 8);
+      this.gatheringNodes.push(...nodes);
+    }
+
+    // Draw gathering nodes on the world
+    for (const node of this.gatheringNodes) {
+      const g = this.add.graphics();
+      g.setDepth(4);
+      const tierColor = TIER_COLORS[node.tier] ?? 0xffffff;
+      g.fillStyle(tierColor, 0.7);
+      g.fillCircle(node.x, node.y, 10);
+      g.lineStyle(2, tierColor, 1);
+      g.strokeCircle(node.x, node.y, 14);
+      // Pulsing sparkle
+      g.fillStyle(0xffffff, 0.5);
+      g.fillCircle(node.x - 3, node.y - 3, 3);
+    }
   }
 
   generateBiomeMap() {
@@ -1227,25 +1316,42 @@ class MMOScene extends Phaser.Scene {
               e.setData("castStartTime", now);
               e.setData("castDuration", hasAoE ? 1500 : 800);
               this.showCastBar(e);
-            } else {
-              const damage = Math.max(1, e.getData("attack") - this.stats.defense);
-              this.stats.health -= damage;
-              this.showFloatingText(this.player.x, this.player.y - 20, `-${damage}`, "#ff0000");
-              e.setData("lastAttack", now);
-              
-              this.tweens.add({
-                targets: this.player,
-                tint: 0xff0000,
-                duration: 100,
-                yoyo: true,
-              });
-              
-              this.cameras.main.shake(60, 0.008);
-              
-              if (this.stats.health <= 0) {
-                this.respawnPlayer();
+              // Souls-like: show telegraph for ranged/AoE attacks
+              if (hasAoE) {
+                this.telegraphManager.aoeCircle(
+                  this.player.x, this.player.y, 70,
+                  hasAoE ? 1500 : 800
+                );
+              } else {
+                this.telegraphManager.rangedLine(
+                  e.x, e.y, this.player.x, this.player.y, 800
+                );
               }
-              this.notifyStats();
+            } else {
+              // Souls-like: show melee telegraph before hit lands
+              const meleeDir = Phaser.Math.Angle.Between(e.x, e.y, this.player.x, this.player.y);
+              const windUpMs = enemyType === "boss" ? 800 : 500;
+              this.telegraphManager.meleeCone(
+                e.x, e.y, attackRange + 15, meleeDir, Math.PI / 3, windUpMs,
+                () => {
+                  // Damage lands after telegraph completes
+                  if (!e.active) return;
+                  // Check if player dodged (was in dodge window + moved out)
+                  const playerDist = Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y);
+                  if (playerDist > attackRange + 20) {
+                    this.showFloatingText(this.player.x, this.player.y - 20, "DODGED!", "#00ff66");
+                    return;
+                  }
+                  const damage = Math.max(1, e.getData("attack") - this.stats.defense);
+                  this.stats.health -= damage;
+                  this.showFloatingText(this.player.x, this.player.y - 20, `-${damage}`, "#ff0000");
+                  this.tweens.add({ targets: this.player, tint: 0xff0000, duration: 100, yoyo: true });
+                  this.cameras.main.shake(60, 0.008);
+                  if (this.stats.health <= 0) this.respawnPlayer();
+                  this.notifyStats();
+                }
+              );
+              e.setData("lastAttack", now);
             }
           }
         }
@@ -1323,6 +1429,17 @@ class MMOScene extends Phaser.Scene {
     }
     
     enemy.setData("lastAttack", this.time.now);
+    
+    // Boss special: use boss slam/sweep telegraphs
+    const enemyType = enemy.getData("type");
+    if (enemyType === "boss" && isAoE) {
+      if (Math.random() > 0.5) {
+        const dir = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+        this.telegraphManager.bossSweep(enemy.x, enemy.y, 120, dir, 1200);
+      } else {
+        this.telegraphManager.bossSlam(this.player.x, this.player.y, 90, 1500);
+      }
+    }
     
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
     const startX = enemy.x + Math.cos(angle) * 25;
@@ -1447,6 +1564,7 @@ class MMOScene extends Phaser.Scene {
     }
 
     this.updateEnemyAI(delta);
+    this.telegraphManager.update();
     this.updateMinimap();
     this.updateCrosshair();
 
@@ -1472,6 +1590,9 @@ export default function MMOWorld() {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<MMOScene | null>(null);
   const spritesLoadedRef = useRef(false);
+
+  const [selectedHero, setSelectedHero] = useState<GrudaWarsHero | null>(null);
+  const [showHeroSelect, setShowHeroSelect] = useState(true);
 
   const [stats, setStats] = useState<PlayerStats>({
     health: 100,
@@ -1504,8 +1625,18 @@ export default function MMOWorld() {
     const scene = new MMOScene();
     sceneRef.current = scene;
 
+    // Apply selected hero before scene initializes
+    if (selectedHero) {
+      scene.setHero(selectedHero);
+    }
+
     scene.setCallbacks(
-      (newStats) => setStats(newStats),
+      (newStats) => setStats(prev => ({
+        ...newStats,
+        heroName: selectedHero?.name,
+        classId: selectedHero?.classId,
+        wcsAttributes: selectedHero?.wcsAttributes,
+      })),
       () => {},
       (cooldowns) => setSpellCooldowns(cooldowns),
       (building, zone) => {
@@ -1576,6 +1707,70 @@ export default function MMOWorld() {
 
   const zoneInfo = getZoneDisplay();
 
+  const handleSelectHero = (hero: GrudaWarsHero) => {
+    setSelectedHero(hero);
+    setShowHeroSelect(false);
+    // Destroy existing game if any, it will re-init with the new hero
+    if (gameRef.current) {
+      gameRef.current.destroy(true);
+      gameRef.current = null;
+    }
+  };
+
+  // Hero selection screen
+  if (showHeroSelect) {
+    return (
+      <div className="min-h-screen bg-black text-white p-4">
+        <div className="max-w-[1000px] mx-auto pt-8">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">Choose Your Hero</h1>
+            <p className="text-muted-foreground">Your Gruda Wars hero enters the MMO World — same stats, same gear, same legend.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {GRUDA_WARS_HEROES.map((hero) => {
+              const derived = deriveCombatStats(hero.wcsAttributes, hero.level);
+              return (
+                <Card
+                  key={hero.syncId}
+                  className="cursor-pointer transition-all hover:scale-[1.02] hover:border-primary"
+                  onClick={() => handleSelectHero(hero)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl">{hero.classId === "warrior" ? "⚔️" : hero.classId === "mage" ? "🔮" : hero.classId === "rogue" ? "🗡️" : "✨"}</div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">{hero.name}</h3>
+                        <p className="text-xs text-muted-foreground mb-2">{hero.title} — {hero.raceId} {hero.classId} Lv.{hero.level}</p>
+                        <div className="grid grid-cols-4 gap-1 text-xs">
+                          <span>HP: {derived.maxHp}</span>
+                          <span>MP: {derived.maxMana}</span>
+                          <span>ATK: {derived.physicalDamage}</span>
+                          <span>DEF: {derived.defense}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground mt-1">
+                          <span>STR {hero.wcsAttributes.strength}</span>
+                          <span>VIT {hero.wcsAttributes.vitality}</span>
+                          <span>INT {hero.wcsAttributes.intellect}</span>
+                          <span>AGI {hero.wcsAttributes.agility}</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {hero.gdaAbilities.filter(a => a.type === "active").map(a => (
+                            <span key={a.id} className="text-[10px] px-1.5 py-0.5 bg-primary/20 rounded">{a.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">Heroes are shared across all Grudge Studio games — your progress carries everywhere.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white p-4">
       <div className="max-w-[1500px] mx-auto">
@@ -1587,8 +1782,8 @@ export default function MMOWorld() {
         )}
         
         {spritesLoading && (
-          <div className="mb-4 p-4 bg-blue-950/30 border border-blue-500/50 rounded-lg">
-            <p className="text-blue-200">Loading game assets...</p>
+          <div className="mb-4 p-4 bg-amber-950/30 border border-amber-500/50 rounded-lg">
+            <p className="text-amber-200">Loading game assets...</p>
           </div>
         )}
 
@@ -1707,12 +1902,12 @@ export default function MMOWorld() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-purple-400" />
+                    <Star className="w-4 h-4 text-amber-400" />
                     <span className="text-sm font-medium">Experience</span>
                   </div>
                   <span className="text-sm font-bold">{stats.xp}/{stats.xpToLevel}</span>
                 </div>
-                <Progress value={(stats.xp / stats.xpToLevel) * 100} className="h-3 bg-purple-950" />
+                <Progress value={(stats.xp / stats.xpToLevel) * 100} className="h-3 bg-amber-950" />
               </div>
 
               <div className="border-t pt-4 space-y-3">

@@ -2209,7 +2209,7 @@ export default function MapEditor() {
                         onClick={() => addEntity('custom_model', undefined, model.url)}
                         data-testid={`button-asset-${model.id}`}
                       >
-                        <Box className="w-3 h-3 mr-2 text-blue-500" />
+                        <Box className="w-3 h-3 mr-2 text-amber-500" />
                         <span className="truncate">{model.filename}</span>
                       </Button>
                     ))

@@ -641,6 +641,112 @@ export const insertLevelRequirementSchema = createInsertSchema(levelRequirements
   id: true,
 });
 
+// ============================================
+// GRUDGE ACCOUNTS — Universal Grudge Studio identity
+// Matches WCS accounts schema. Every login method produces a row here.
+// Grudge ID = Puter ID. Crossmint wallet auto-created on registration.
+// ============================================
+export const accounts = pgTable("accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  grudgeId: varchar("grudge_id", { length: 64 }).notNull().unique(),
+  username: varchar("username", { length: 50 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }),
+  email: varchar("email", { length: 255 }),
+  avatarUrl: text("avatar_url"),
+  faction: varchar("faction", { length: 50 }),
+  // Auth — password
+  passwordHash: varchar("password_hash", { length: 255 }),
+  // Auth — Solana wallet (Crossmint auto-created)
+  walletAddress: varchar("wallet_address", { length: 255 }),
+  walletType: varchar("wallet_type", { length: 50 }), // crossmint-custodial | external
+  crossmintWalletId: varchar("crossmint_wallet_id", { length: 255 }),
+  crossmintEmail: varchar("crossmint_email", { length: 255 }),
+  // Auth — Puter (Grudge ID IS the Puter ID)
+  puterUuid: varchar("puter_uuid", { length: 255 }),
+  puterUsername: varchar("puter_username", { length: 100 }),
+  // Auth — Discord
+  discordId: varchar("discord_id", { length: 255 }),
+  discordUsername: varchar("discord_username", { length: 100 }),
+  // Account status
+  isPremium: boolean("is_premium").default(false),
+  isGuest: boolean("is_guest").default(false),
+  // Balances
+  gold: integer("gold").default(0),
+  gbuxBalance: integer("gbux_balance").default(0),
+  // Game counts
+  totalCharacters: integer("total_characters").default(0),
+  totalIslands: integer("total_islands").default(0),
+  homeIslandId: varchar("home_island_id", { length: 255 }),
+  hasCompletedTutorial: boolean("has_completed_tutorial").default(false),
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  lastLoginAt: timestamp("last_login_at"),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+}, (table) => ({
+  grudgeIdIdx: index("accounts_grudge_id_idx").on(table.grudgeId),
+  puterUuidIdx: index("accounts_puter_uuid_idx").on(table.puterUuid),
+  walletIdx: index("accounts_wallet_idx").on(table.walletAddress),
+}));
+
+export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true });
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+export type Account = typeof accounts.$inferSelect;
+
+// ============================================
+// GRUDGE CHARACTERS — Per-player WCS-compatible characters
+// Linked to accounts.id. Full 8 WCS stats, equipment, professions, NFT fields.
+// Same schema as WCS characters table for cross-game portability.
+// ============================================
+export const grudgeCharacters = pgTable("grudge_characters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").references(() => accounts.id).notNull(),
+  grudgeId: varchar("grudge_id", { length: 64 }),
+  name: text("name").notNull(),
+  classId: text("class_id"), // warrior, mage, ranger, shapeshifter
+  raceId: text("race_id"), // human, orc, elf, dwarf, barbarian, undead
+  profession: text("profession"),
+  faction: text("faction"),
+  level: integer("level").notNull().default(1),
+  experience: integer("experience").notNull().default(0),
+  gold: integer("gold").notNull().default(1000),
+  skillPoints: integer("skill_points").notNull().default(5),
+  attributePoints: integer("attribute_points").notNull().default(0),
+  // WCS 8-stat attributes
+  attributes: jsonb("attributes").default(sql`'{"Strength":0,"Vitality":0,"Endurance":0,"Intellect":0,"Wisdom":0,"Dexterity":0,"Agility":0,"Tactics":0}'::jsonb`),
+  // 10-slot equipment
+  equipment: jsonb("equipment").default(sql`'{"head":null,"chest":null,"legs":null,"feet":null,"hands":null,"shoulders":null,"mainHand":null,"offHand":null,"accessory1":null,"accessory2":null}'::jsonb`),
+  // 5 profession progressions
+  professionProgression: jsonb("profession_progression").default(sql`'{"Miner":{"level":1,"xp":0,"pointsSpent":0},"Forester":{"level":1,"xp":0,"pointsSpent":0},"Mystic":{"level":1,"xp":0,"pointsSpent":0},"Chef":{"level":1,"xp":0,"pointsSpent":0},"Engineer":{"level":1,"xp":0,"pointsSpent":0}}'::jsonb`),
+  // Inventory
+  inventory: jsonb("inventory").default(sql`'[]'::jsonb`),
+  // Combat
+  abilities: jsonb("abilities").default(sql`'[]'::jsonb`),
+  skillTree: jsonb("skill_tree").default(sql`'{}'::jsonb`),
+  currentHealth: integer("current_health"),
+  currentMana: integer("current_mana"),
+  currentStamina: integer("current_stamina"),
+  avatarUrl: text("avatar_url"),
+  // NFT fields
+  isNft: boolean("is_nft").default(false),
+  nftMintAddress: varchar("nft_mint_address", { length: 255 }),
+  nftCollection: varchar("nft_collection", { length: 255 }),
+  nftMintedAt: timestamp("nft_minted_at"),
+  // State
+  isActive: boolean("is_active").default(true),
+  slotIndex: integer("slot_index").default(0),
+  isGuest: boolean("is_guest").default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+}, (table) => ({
+  accountIdIdx: index("grudge_chars_account_id_idx").on(table.accountId),
+  grudgeIdIdx: index("grudge_chars_grudge_id_idx").on(table.grudgeId),
+}));
+
+export const insertGrudgeCharacterSchema = createInsertSchema(grudgeCharacters).omit({ id: true, createdAt: true });
+export type InsertGrudgeCharacter = z.infer<typeof insertGrudgeCharacterSchema>;
+export type GrudgeCharacter = typeof grudgeCharacters.$inferSelect;
+
 // Saved custom characters from character creator (MMO-style)
 export const savedCharacters = pgTable("saved_characters", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

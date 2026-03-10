@@ -81,7 +81,7 @@ const GAME_TYPE_INFO = {
     name: 'Custom Game', 
     icon: Gamepad2, 
     description: 'Custom game mode',
-    color: 'text-purple-500'
+    color: 'text-amber-500'
   },
 };
 

@@ -3,6 +3,7 @@ import puterService, { type PuterUser } from '@/lib/puter';
 import puterStorage from '@/lib/puterStorage';
 import { PuterLoader } from '@/components/puter-loader';
 import { getAuthData } from '@/lib/auth';
+import { createGrudgeCloud } from '@/lib/grudge-cloud-impl';
 
 interface PuterContextType {
   isReady: boolean;
@@ -67,6 +68,18 @@ export function PuterProvider({ children }: { children: ReactNode }) {
         // 401 from Puter API = not signed in, this is normal
         setIsSignedIn(false);
         setUser(null);
+      }
+
+      // Initialize GrudgeCloud singleton after SDK is ready
+      try {
+        const cloud = createGrudgeCloud();
+        await cloud.init();
+        window.GrudgeCloud = cloud;
+        window.dispatchEvent(
+          new CustomEvent('grudge-cloud-ready', { detail: cloud }),
+        );
+      } catch {
+        // GrudgeCloud init is non-critical
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize cloud storage';

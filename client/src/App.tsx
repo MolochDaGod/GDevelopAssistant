@@ -17,6 +17,8 @@ import { AuthGuard } from "@/components/AuthGuard";
 import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
 
+const AuthPage = lazy(() => import("@/pages/auth"));
+
 const ProjectsPage = lazy(() => import("@/pages/projects"));
 const DocsPage = lazy(() => import("@/pages/docs"));
 const RtsBuilder = lazy(() => import("@/pages/rts-builder"));
@@ -162,7 +164,7 @@ function Header() {
         <div className="h-6 w-px bg-border" />
         <h1 
           className="text-lg font-bold uppercase tracking-wide hidden sm:block"
-          style={{ fontFamily: 'Bebas Neue, Oswald, sans-serif' }}
+          style={{ fontFamily: 'Cinzel, serif' }}
           data-testid="text-page-title"
         >
           {getPageTitle()}
@@ -213,13 +215,33 @@ export default function App() {
       <TooltipProvider>
         <LoadingProvider>
           <PuterProvider>
-            <AuthGuard>
-              <AppLayout />
-              <Toaster />
-            </AuthGuard>
+            <Suspense fallback={<PageLoader />}>
+              <AuthRouter />
+            </Suspense>
           </PuterProvider>
         </LoadingProvider>
       </TooltipProvider>
     </QueryClientProvider>
+  );
+}
+
+/**
+ * Top-level router: /auth is rendered outside AuthGuard so it's always accessible.
+ * Everything else goes through AuthGuard → AppLayout.
+ */
+function AuthRouter() {
+  return (
+    <Switch>
+      <Route path="/auth">
+        <AuthPage />
+        <Toaster />
+      </Route>
+      <Route>
+        <AuthGuard>
+          <AppLayout />
+          <Toaster />
+        </AuthGuard>
+      </Route>
+    </Switch>
   );
 }

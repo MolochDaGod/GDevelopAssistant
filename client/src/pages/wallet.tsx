@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,18 +21,20 @@ const CURRENCY_COLORS: Record<string, string> = {
 export default function WalletPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
-  const { data: currencies } = useQuery<Currency[]>({
-    queryKey: ["/api/currencies"],
-  });
+  const { data: currencies } = useCachedQuery<Currency[]>(
+    ["/api/currencies"],
+    { ttlMs: 600_000 },
+  );
 
-  const { data: wallets, isLoading: walletsLoading } = useQuery<PlayerWallet[]>({
-    queryKey: ["/api/players/me/wallet"],
-    enabled: isAuthenticated,
-  });
+  const { data: wallets, isLoading: walletsLoading } = useCachedQuery<PlayerWallet[]>(
+    ["/api/players/me/wallet"],
+    { ttlMs: 60_000, enabled: isAuthenticated },
+  );
 
-  const { data: storeItems } = useQuery<StoreItem[]>({
-    queryKey: ["/api/store"],
-  });
+  const { data: storeItems } = useCachedQuery<StoreItem[]>(
+    ["/api/store"],
+    { ttlMs: 600_000 },
+  );
 
   const getWalletBalance = (currencyId: string) => {
     const wallet = wallets?.find(w => w.currencyId === currencyId);

@@ -236,6 +236,61 @@ class PuterStorageService {
     const keys = await this.puter.kv.list('project:*');
     return keys.map(key => key.replace('project:', ''));
   }
+
+  /**
+   * Upload a game asset to Puter FS with automatic category routing.
+   * After upload, the caller should POST metadata to /api/assets (Neon)
+   * with the returned path as sourceUrl.
+   *
+   * Neon remains the source of truth for asset metadata.
+   */
+  async uploadAssetToCloud(
+    file: File,
+    category?: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<{ name: string; path: string; category: string; size: number }> {
+    if (!this.isAvailable) throw new Error('Puter SDK not available');
+
+    const resolvedCategory = category || this.detectCategory(file.name);
+    const uuid = crypto.randomUUID().slice(0, 8);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `${this.basePath}/assets/${resolvedCategory}/${uuid}_${safeName}`;
+
+    onProgress?.(10);
+
+    const result = await this.puter.fs.write(storagePath, file, {
+      createMissingParents: true,
+      dedupeName: true,
+    });
+
+    onProgress?.(100);
+
+    return {
+      name: result.name,
+      path: result.path,
+      category: resolvedCategory,
+      size: file.size,
+    };
+  }
+
+  /** Detect asset category from file extension */
+  private detectCategory(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const categoryMap: Record<string, string> = {
+      // 3D models
+      glb: 'models', gltf: 'models', fbx: 'models', obj: 'models',
+      // Textures / images
+      png: 'textures', jpg: 'textures', jpeg: 'textures',
+      webp: 'textures', svg: 'textures', hdr: 'textures',
+      // Audio
+      mp3: 'audio', ogg: 'audio', wav: 'audio', flac: 'audio',
+      // Animations
+      anim: 'animations', bvh: 'animations',
+      // Sprites
+      atlas: 'sprites', json: 'sprites',
+    };
+    return categoryMap[ext] || 'misc';
+  }
 }
 
 export const puterStorage = new PuterStorageService();

@@ -1,5 +1,6 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,14 +28,15 @@ export default function CharactersPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  const { data: allCharacters, isLoading: charactersLoading } = useQuery<Character[]>({
-    queryKey: ["/api/characters"],
-  });
+  const { data: allCharacters, isLoading: charactersLoading } = useCachedQuery<Character[]>(
+    ["/api/characters"],
+    { ttlMs: 600_000 },
+  );
 
-  const { data: playerCharacters } = useQuery<PlayerCharacter[]>({
-    queryKey: ["/api/players/me/characters"],
-    enabled: isAuthenticated,
-  });
+  const { data: playerCharacters } = useCachedQuery<PlayerCharacter[]>(
+    ["/api/players/me/characters"],
+    { ttlMs: 120_000, enabled: isAuthenticated },
+  );
 
   const unlockCharacterMutation = useMutation({
     mutationFn: async (characterId: string) => {

@@ -85,7 +85,7 @@ export default function ChatPage() {
   return (
     <div className="relative flex h-full flex-col">
       <div 
-        className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-blue-900/10 pointer-events-none"
+        className="absolute inset-0 bg-gradient-to-br from-amber-900/10 via-transparent to-yellow-900/10 pointer-events-none"
       />
       <div className="relative z-10 flex h-full flex-col">
       <div className="border-b p-4 bg-[#171312]">

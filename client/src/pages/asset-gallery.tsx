@@ -642,7 +642,7 @@ export default function AssetGallery() {
                     )}
                     
                     {isAudio(asset.assetType) && (
-                      <Badge className="absolute top-2 left-2 bg-purple-600 text-white text-xs">
+                      <Badge className="absolute top-2 left-2 bg-amber-600 text-white text-xs">
                         Audio
                       </Badge>
                     )}
@@ -686,7 +686,7 @@ export default function AssetGallery() {
                 <Badge className="bg-red-600 text-white">Animated</Badge>
               )}
               {selectedAsset && isAudio(selectedAsset.assetType) && (
-                <Badge className="bg-purple-600 text-white">Audio</Badge>
+                <Badge className="bg-amber-600 text-white">Audio</Badge>
               )}
             </DialogTitle>
           </DialogHeader>

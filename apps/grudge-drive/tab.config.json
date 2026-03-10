@@ -1,0 +1,11 @@
+{
+  "slug": "grudge-drive",
+  "title": "Grudge Drive",
+  "version": "0.1.0",
+  "description": "Asset management and cloud storage integration for the Grudge Studio ecosystem.",
+  "routes": [{ "path": "/grudge-drive", "entry": "tabs/grudge-drive/index.tsx" }],
+  "assets": {
+    "sprites": "assets/grudge-drive/sprites/",
+    "models": "assets/grudge-drive/models/"
+  }
+}

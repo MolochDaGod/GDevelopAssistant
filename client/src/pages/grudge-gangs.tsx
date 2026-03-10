@@ -1679,7 +1679,7 @@ export default function GrudgeGangs() {
                             {stat === 'attack' && <Sword className="h-4 w-4 text-orange-500" />}
                             {stat === 'defense' && <Shield className="h-4 w-4 text-gray-500" />}
                             {stat === 'speed' && <Crosshair className="h-4 w-4 text-green-500" />}
-                            {stat === 'range' && <Target className="h-4 w-4 text-purple-500" />}
+                            {stat === 'range' && <Target className="h-4 w-4 text-amber-500" />}
                             <span className="capitalize text-sm game-text">{stat}:</span>
                             <span className="font-bold game-hud">{value}</span>
                           </div>

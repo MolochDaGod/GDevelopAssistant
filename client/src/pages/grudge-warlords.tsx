@@ -307,7 +307,7 @@ export default function GrudgeWarlords() {
             <Badge variant="outline" className="text-yellow-500 border-yellow-500/50">
               Havok Physics
             </Badge>
-            <Badge variant="outline" className="text-blue-500 border-blue-500/50">
+            <Badge variant="outline" className="text-amber-500 border-amber-500/50">
               WebGL 2.0
             </Badge>
           </div>
@@ -538,7 +538,7 @@ export default function GrudgeWarlords() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-blue-500" />
+                    <Layers className="w-4 h-4 text-amber-500" />
                     Current Scene
                   </CardTitle>
                 </CardHeader>
@@ -613,10 +613,10 @@ export default function GrudgeWarlords() {
               ))}
             </div>
 
-            <Card className="border-blue-500/20">
+            <Card className="border-amber-500/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ExternalLink className="w-5 h-5 text-blue-500" />
+                  <ExternalLink className="w-5 h-5 text-amber-500" />
                   Direct Scene Access
                 </CardTitle>
                 <CardDescription>
@@ -651,10 +651,10 @@ export default function GrudgeWarlords() {
               }}
             />
 
-            <Card className="border-purple-500/20">
+            <Card className="border-amber-500/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Gamepad2 className="w-5 h-5 text-purple-500" />
+                  <Gamepad2 className="w-5 h-5 text-amber-500" />
                   Motion Controller Setup
                 </CardTitle>
                 <CardDescription>
@@ -769,10 +769,10 @@ export default function GrudgeWarlords() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-blue-500/20">
+              <Card className="border-amber-500/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Gamepad2 className="w-5 h-5 text-blue-500" />
+                    <Gamepad2 className="w-5 h-5 text-amber-500" />
                     Mobile Support
                   </CardTitle>
                 </CardHeader>

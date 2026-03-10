@@ -115,5 +115,45 @@ export function setupGrudgeAuth(app: Express) {
     res.json(result.data);
   });
 
+  // ─── Discord OAuth — get URL or handle callback ───
+  app.get("/api/auth/discord", async (req, res) => {
+    // Pass the return URL as state so Discord redirects back through the gateway
+    const state = req.query.state || req.query.return || '';
+    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+    const result = await gatewayProxy(`discord${qs}`, "GET");
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── GitHub OAuth — get URL or handle callback ───
+  app.get("/api/auth/github", async (req, res) => {
+    const state = req.query.state || req.query.return || '';
+    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+    const result = await gatewayProxy(`github${qs}`, "GET");
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── Google OAuth — get URL or handle callback ───
+  app.get("/api/auth/google", async (req, res) => {
+    const state = req.query.state || req.query.return || '';
+    const qs = state ? `?state=${encodeURIComponent(String(state))}` : '';
+    const result = await gatewayProxy(`google${qs}`, "GET");
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── Phone (Twilio SMS) — send code / verify code ───
+  app.post("/api/auth/phone", async (req, res) => {
+    const result = await gatewayProxy("phone", "POST", req.body);
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── Wallet connect — link or login via Solana wallet ───
+  app.post("/api/auth/wallet", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const result = await gatewayProxy("connect-wallet", "POST", req.body, {
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    });
+    res.status(result.status).json(result.data);
+  });
+
   console.log("✅ Grudge Auth routes registered (gateway proxy mode)");
 }

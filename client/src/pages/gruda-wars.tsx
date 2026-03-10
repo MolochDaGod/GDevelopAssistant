@@ -425,7 +425,7 @@ export default function GrudaWars() {
                   onClick={() => openSystem(grudachainUrl)}
                 >
                   <CardContent className="p-3 flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-amber-400" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">AI Node Dashboard</p>
                       <p className="text-[10px] text-muted-foreground">GRUDA Legion AI services</p>
