@@ -82,8 +82,7 @@ let seeded = false;
 async function autoSeedIfEmpty() {
   if (seeded) return;
   try {
-    // @ts-expect-error drizzle proxy
-    const existingUnits = await db.query.openrtsUnits.findMany({ limit: 1 });
+    const existingUnits = await db.select().from(openrtsUnits).limit(1);
     if (existingUnits.length > 0) {
       seeded = true;
       return;
@@ -117,8 +116,7 @@ export function registerOpenRTSRoutes(app: Express) {
   app.get("/api/openrts/units", async (_req, res) => {
     try {
       await autoSeedIfEmpty();
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsUnits.findMany();
+      const result = await db.select().from(openrtsUnits);
       res.json(result);
     } catch (error) {
       console.error("Error fetching OpenRTS units:", error);
@@ -149,8 +147,7 @@ export function registerOpenRTSRoutes(app: Express) {
   app.get("/api/openrts/weapons", async (_req, res) => {
     try {
       await autoSeedIfEmpty();
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsWeapons.findMany();
+      const result = await db.select().from(openrtsWeapons);
       res.json(result);
     } catch (error) {
       console.error("Error fetching OpenRTS weapons:", error);
@@ -180,8 +177,7 @@ export function registerOpenRTSRoutes(app: Express) {
   app.get("/api/openrts/movers", async (_req, res) => {
     try {
       await autoSeedIfEmpty();
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsMover.findMany();
+      const result = await db.select().from(openrtsMover);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch movers" });
@@ -201,8 +197,7 @@ export function registerOpenRTSRoutes(app: Express) {
   app.get("/api/openrts/effects", async (_req, res) => {
     try {
       await autoSeedIfEmpty();
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsEffects.findMany();
+      const result = await db.select().from(openrtsEffects);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch effects" });
@@ -230,8 +225,7 @@ export function registerOpenRTSRoutes(app: Express) {
   // ─── Actors ───
   app.get("/api/openrts/actors", async (_req, res) => {
     try {
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsActors.findMany();
+      const result = await db.select().from(openrtsActors);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch actors" });
@@ -241,8 +235,7 @@ export function registerOpenRTSRoutes(app: Express) {
   // ─── Projectiles ───
   app.get("/api/openrts/projectiles", async (_req, res) => {
     try {
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsProjectiles.findMany();
+      const result = await db.select().from(openrtsProjectiles);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch projectiles" });
@@ -252,8 +245,7 @@ export function registerOpenRTSRoutes(app: Express) {
   // ─── Trinkets ───
   app.get("/api/openrts/trinkets", async (_req, res) => {
     try {
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsTrinkets.findMany();
+      const result = await db.select().from(openrtsTrinkets);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch trinkets" });
@@ -263,8 +255,7 @@ export function registerOpenRTSRoutes(app: Express) {
   // ─── Map Styles ───
   app.get("/api/openrts/map-styles", async (_req, res) => {
     try {
-      // @ts-expect-error drizzle proxy
-      const result = await db.query.openrtsMapStyles.findMany();
+      const result = await db.select().from(openrtsMapStyles);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch map styles" });
