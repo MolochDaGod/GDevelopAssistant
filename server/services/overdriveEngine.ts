@@ -28,6 +28,8 @@ export interface Vehicle {
 export interface Track {
   id: string;
   name: string;
+  description: string;
+  length: number;
   width: number;
   height: number;
   checkpoints: Array<{ x: number; y: number; radius: number }>;
@@ -36,6 +38,7 @@ export interface Track {
   finishLine: { x: number; y: number };
   difficulty: number;
   terrain: 'asphalt' | 'dirt' | 'ice' | 'grass';
+  bestTime?: number;
 }
 
 export interface RaceState {
@@ -80,6 +83,8 @@ export class OverdriveEngine {
     this.tracks.set('urban_circuit', {
       id: 'urban_circuit',
       name: 'Urban Circuit',
+      description: 'Tight city streets with sharp turns and traffic cones — master the urban grid.',
+      length: 800,
       width: 2000,
       height: 1600,
       terrain: 'asphalt',
@@ -105,6 +110,8 @@ export class OverdriveEngine {
     this.tracks.set('desert_speedway', {
       id: 'desert_speedway',
       name: 'Desert Speedway',
+      description: 'Wide-open desert straightaway with sand drifts — pure top-speed drag racing.',
+      length: 1200,
       width: 3000,
       height: 1200,
       terrain: 'dirt',
@@ -128,6 +135,8 @@ export class OverdriveEngine {
     this.tracks.set('mountain_course', {
       id: 'mountain_course',
       name: 'Mountain Course',
+      description: 'Winding mountain switchbacks with elevation changes — precision driving required.',
+      length: 1500,
       width: 2200,
       height: 2000,
       terrain: 'asphalt',

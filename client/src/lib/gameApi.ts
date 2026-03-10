@@ -101,12 +101,12 @@ export const overdriveApi = {
     }
   },
 
-  async startRace(trackId: string, vehicleId: string): Promise<Race | null> {
+  async startRace(trackId: string): Promise<Race | null> {
     try {
       const response = await fetch(`${API_BASE}/overdrive/races`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackId, vehicleId }),
+        body: JSON.stringify({ trackId, maxPlayers: 1 }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();

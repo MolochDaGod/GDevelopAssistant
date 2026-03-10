@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Car, Trophy, Clock, Gamepad2, Zap, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { overdriveApi, type Track, type LeaderboardEntry } from "@/lib/gameApi";
 
 export default function GrudgeDrive() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isRacingRef = useRef(false);
+  const raceIdRef = useRef<string | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
@@ -39,11 +42,28 @@ export default function GrudgeDrive() {
     }
   };
 
+  // Cleanup event listeners and animation loop when race ends or component unmounts
+  useEffect(() => {
+    return () => {
+      isRacingRef.current = false;
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  const stopRace = useCallback(() => {
+    isRacingRef.current = false;
+    cleanupRef.current?.();
+    cleanupRef.current = null;
+    setIsRacing(false);
+  }, []);
+
   const startRace = async (track: Track) => {
     try {
       setError(null);
-      const race = await overdriveApi.startRace(track.id, 'default-vehicle');
+      const race = await overdriveApi.startRace(track.id);
       if (race) {
+        raceIdRef.current = race.id;
+        isRacingRef.current = true;
         setIsRacing(true);
         initRaceCanvas();
       } else {
@@ -63,21 +83,24 @@ export default function GrudgeDrive() {
     if (!ctx) return;
 
     let carX = canvas.width / 2 - 20;
-    let carY = canvas.height - 150;
+    const carY = canvas.height - 150;
     let carSpeed = 0;
-    let maxSpeed = 15;
-    let acceleration = 0.3;
+    const maxSpeed = 15;
+    const acceleration = 0.3;
     let rpm = 0;
     let gear = 1;
     let raceProgress = 0;
     let opponentProgress = 0;
-    let opponentSpeed = 8 + Math.random() * 4;
-    let raceDistance = 400; // meters
+    const opponentSpeed = 8 + Math.random() * 4;
+    const raceDistance = 400; // meters
     let countdown = 3;
     let countdownTimer = 0;
     let raceStarted = false;
     let raceFinished = false;
-    let keys: { [key: string]: boolean } = {};
+    let raceEndHandled = false;
+    let elapsedMs = 0;
+    let lastFrameTime = performance.now();
+    const keys: { [key: string]: boolean } = {};
 
     // Houston map elements
     const houstonLandmarks = [
@@ -87,15 +110,24 @@ export default function GrudgeDrive() {
       { name: 'NASA', y: 400 },
     ];
 
-    window.addEventListener('keydown', (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       keys[e.key] = true;
       if (e.key === 'Shift' && gear < 5) gear++;
       if (e.key === 'Control' && gear > 1) gear--;
-    });
+    };
 
-    window.addEventListener('keyup', (e) => {
+    const onKeyUp = (e: KeyboardEvent) => {
       keys[e.key] = false;
-    });
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    // Store cleanup so we can call it from React
+    cleanupRef.current = () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
 
     const drawHoustonMap = (offset: number) => {
       // Draw Houston street grid background
@@ -200,29 +232,35 @@ export default function GrudgeDrive() {
       ctx.fillStyle = rpmPercent > 0.8 ? '#ff0000' : '#00ff00';
       ctx.fillRect(20, 95, 170 * rpmPercent, 20);
       
-      // Distance
+      // Distance + time
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(canvas.width - 210, 10, 200, 80);
+      ctx.fillRect(canvas.width - 210, 10, 200, 100);
       ctx.fillStyle = '#fff';
       ctx.font = '18px monospace';
       ctx.fillText(`YOU: ${Math.floor(raceProgress)}m`, canvas.width - 200, 35);
       ctx.fillText(`OPP: ${Math.floor(opponentProgress)}m`, canvas.width - 200, 60);
       ctx.fillText(`/${raceDistance}m`, canvas.width - 200, 80);
+      ctx.fillStyle = '#ffff00';
+      ctx.fillText(`TIME: ${(elapsedMs / 1000).toFixed(1)}s`, canvas.width - 200, 100);
     };
 
-    const animate = () => {
-      if (!isRacing) return;
+    const animate = (now: number) => {
+      if (!isRacingRef.current) return;
+
+      const dt = now - lastFrameTime;
+      lastFrameTime = now;
 
       drawHoustonMap(-raceProgress * 1.5);
 
       // Countdown
       if (!raceStarted) {
-        countdownTimer += 16;
+        countdownTimer += dt;
         if (countdownTimer > 1000) {
           countdown--;
           countdownTimer = 0;
           if (countdown === 0) {
             raceStarted = true;
+            lastFrameTime = performance.now();
           }
         }
         
@@ -236,6 +274,8 @@ export default function GrudgeDrive() {
       }
 
       if (raceStarted && !raceFinished) {
+        elapsedMs += dt;
+
         // Player controls
         if (keys['ArrowUp'] || keys['w'] || keys['W']) {
           carSpeed += acceleration * (gear / 5);
@@ -287,19 +327,35 @@ export default function GrudgeDrive() {
         ctx.textAlign = 'center';
         ctx.fillText(won ? 'YOU WIN!' : 'YOU LOSE!', canvas.width / 2, canvas.height / 2 - 40);
         
+        const playerTime = (elapsedMs / 1000).toFixed(2);
+        const opponentTime = (raceDistance / (opponentSpeed / 10) / 60).toFixed(2);
+
         ctx.fillStyle = '#fff';
         ctx.font = '24px monospace';
-        ctx.fillText(`Your time: ${(raceProgress / carSpeed * 6).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 20);
-        ctx.fillText(`Opponent: ${(opponentProgress / opponentSpeed * 6).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 60);
+        ctx.fillText(`Your time: ${playerTime}s`, canvas.width / 2, canvas.height / 2 + 20);
+        ctx.fillText(`Opponent: ${opponentTime}s`, canvas.width / 2, canvas.height / 2 + 60);
         ctx.textAlign = 'left';
         
-        setTimeout(() => setIsRacing(false), 5000);
+        // Fire once: submit race result and schedule end
+        if (!raceEndHandled) {
+          raceEndHandled = true;
+
+          // Submit completion to API
+          if (raceIdRef.current) {
+            overdriveApi.completeRace(raceIdRef.current, elapsedMs, elapsedMs).catch(console.error);
+          }
+
+          setTimeout(() => {
+            stopRace();
+            loadGameData();
+          }, 4000);
+        }
       }
 
       requestAnimationFrame(animate);
     };
 
-    animate();
+    requestAnimationFrame(animate);
   };
 
   return (
@@ -338,7 +394,7 @@ export default function GrudgeDrive() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xl font-bold text-white">Racing!</h3>
                   <Button
-                    onClick={() => setIsRacing(false)}
+                    onClick={stopRace}
                     variant="outline"
                     size="sm"
                   >
