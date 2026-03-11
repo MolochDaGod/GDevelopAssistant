@@ -78,7 +78,7 @@ const xai = process.env.XAI_API_KEY
 const GDEVELOP_SYSTEM_PROMPT = `You are an expert GDevelop game development assistant powered by xAI's Grok. You help with game design, mechanics, GDevelop event systems, asset recommendations, and integration with tools like Three.js, Babylon.js, and LUME. Be practical, actionable, and encouraging.`;
 
 // ════════════════════════════════════════════
-// Auth routes (direct DB — no external gateway)
+// Auth routes (proxy to auth-gateway)
 // ════════════════════════════════════════════
 setupGrudgeAuth(app);
 
@@ -86,27 +86,30 @@ setupGrudgeAuth(app);
 // Health check
 // ════════════════════════════════════════════
 app.get("/api/health", async (_req: Request, res: Response) => {
-  // Direct DB connectivity check (no external gateway dependency)
-  let dbOk = false;
+  // Quick auth-gateway ping (non-blocking, 3s timeout)
+  let gatewayOk = false;
   try {
-    if (isDatabaseConfigured()) {
-      await db.query.accounts.findFirst();
-      dbOk = true;
-    }
-  } catch { /* DB unreachable */ }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const gw = await fetch(
+      `${process.env.AUTH_GATEWAY_URL || "https://auth-gateway-flax.vercel.app"}/api/health`,
+      { signal: ctrl.signal },
+    );
+    clearTimeout(t);
+    gatewayOk = gw.ok;
+  } catch { /* unreachable */ }
 
   res.json({
     status: "healthy",
     service: "GDevelop Assistant (Vercel)",
     timestamp: new Date().toISOString(),
     runtime: process.version,
-    authMode: "direct-db",
     env: {
       hasDatabase: isDatabaseConfigured(),
-      dbConnected: dbOk,
       hasSessionSecret: !!process.env.SESSION_SECRET,
       hasXaiKey: !!process.env.XAI_API_KEY,
       hasMeshyKey: !!process.env.MESHY_API_KEY,
+      authGateway: gatewayOk ? "reachable" : "unreachable",
       nodeEnv: process.env.NODE_ENV || "not-set",
     },
   });
@@ -395,6 +398,68 @@ try { registerUserRoutes(app); } catch { /* DB may not be configured */ }
 // ── Lobby stats (no Socket.IO — returns zeros) ──
 app.get("/api/lobby/stats", (_req, res) => {
   res.json({ rooms: 0, players: 0, available: false, hint: "Real-time lobby requires persistent server (Railway)" });
+});
+
+// ════════════════════════════════════════════
+// OVERDRIVE RACING GAME ROUTES
+// ════════════════════════════════════════════
+
+app.get("/api/overdrive/tracks", (_req, res) => {
+  try {
+    res.json(overdriveEngine.getTracks());
+  } catch { res.status(500).json({ error: "Failed to fetch tracks" }); }
+});
+
+app.get("/api/overdrive/tracks/:trackId", (req, res) => {
+  const track = overdriveEngine.getTrack(req.params.trackId);
+  track ? res.json(track) : res.status(404).json({ error: "Track not found" });
+});
+
+app.post("/api/overdrive/races", (req, res) => {
+  try {
+    const { trackId, maxPlayers = 4 } = req.body;
+    if (!trackId) return res.status(400).json({ error: "trackId is required" });
+    res.status(201).json(overdriveEngine.createRace(trackId, maxPlayers));
+  } catch (e: any) { res.status(400).json({ error: e.message || "Failed to create race" }); }
+});
+
+app.post("/api/overdrive/races/:raceId/join", (req, res) => {
+  try {
+    const { playerId } = req.body;
+    if (!playerId) return res.status(400).json({ error: "playerId is required" });
+    res.status(201).json(overdriveEngine.addVehicleToRace(req.params.raceId, playerId));
+  } catch (e: any) { res.status(400).json({ error: e.message || "Failed to join race" }); }
+});
+
+app.get("/api/overdrive/races/:raceId", (req, res) => {
+  const race = overdriveEngine.getRaceState(req.params.raceId);
+  if (!race) return res.status(404).json({ error: "Race not found" });
+  res.json({
+    ...race,
+    vehicles: Array.from(race.vehicles.values()),
+    playerTimes: Object.fromEntries(race.playerTimes),
+  });
+});
+
+app.get("/api/overdrive/leaderboard", (req, res) => {
+  try {
+    const { trackId, limit = 50 } = req.query;
+    res.json(overdriveEngine.getLeaderboard(
+      typeof trackId === "string" ? trackId : undefined,
+      Math.min(Number(limit) || 50, 100),
+    ));
+  } catch { res.status(500).json({ error: "Failed to fetch leaderboard" }); }
+});
+
+app.post("/api/overdrive/leaderboard", (req, res) => {
+  try {
+    const { playerId, playerName, trackId, time, difficulty } = req.body;
+    if (!playerId || !playerName || !trackId || !time) {
+      return res.status(400).json({ error: "playerId, playerName, trackId, and time are required" });
+    }
+    overdriveEngine.addLeaderboardEntry({ playerId, playerName, trackId, time, date: new Date(), difficulty: difficulty || 1 });
+    res.status(201).json({ success: true });
+  } catch { res.status(500).json({ error: "Failed to add leaderboard entry" }); }
 });
 
 // ════════════════════════════════════════════

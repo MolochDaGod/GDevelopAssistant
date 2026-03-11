@@ -103,7 +103,8 @@ export function PuterProvider({ children }: { children: ReactNode }) {
 
   // Initialize Puter storage directories and link Puter UUID to Grudge account
   const initPuterStorageAndLink = useCallback(async (userData: PuterUser | null) => {
-    if (userData) {
+    // Only attempt mkdir when Puter is authenticated (avoids 403 spam)
+    if (userData?.uuid) {
       try {
         await puterStorage.initializeDirectories();
       } catch (err) {

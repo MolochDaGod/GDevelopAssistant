@@ -112,6 +112,19 @@ async function autoSeedIfEmpty() {
 
 export function registerOpenRTSRoutes(app: Express) {
 
+  // Helper: return empty array when DB tables don't exist yet (not pushed)
+  function gracefulQuery(label: string) {
+    return (error: unknown, res: import("express").Response) => {
+      const msg = (error as any)?.message || "";
+      if (msg.includes("does not exist") || msg.includes("relation")) {
+        console.warn(`OpenRTS ${label}: table not found, returning []`);
+        return res.json([]);
+      }
+      console.error(`Error fetching OpenRTS ${label}:`, error);
+      return res.status(500).json({ error: `Failed to fetch ${label}` });
+    };
+  }
+
   // ─── Units ───
   app.get("/api/openrts/units", async (_req, res) => {
     try {
@@ -119,8 +132,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsUnits);
       res.json(result);
     } catch (error) {
-      console.error("Error fetching OpenRTS units:", error);
-      res.status(500).json({ error: "Failed to fetch units" });
+      return gracefulQuery("units")(error, res);
     }
   });
 
@@ -150,8 +162,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsWeapons);
       res.json(result);
     } catch (error) {
-      console.error("Error fetching OpenRTS weapons:", error);
-      res.status(500).json({ error: "Failed to fetch weapons" });
+      return gracefulQuery("weapons")(error, res);
     }
   });
 
@@ -180,7 +191,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsMover);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch movers" });
+      return gracefulQuery("movers")(error, res);
     }
   });
 
@@ -200,7 +211,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsEffects);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch effects" });
+      return gracefulQuery("effects")(error, res);
     }
   });
 
@@ -228,7 +239,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsActors);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch actors" });
+      return gracefulQuery("actors")(error, res);
     }
   });
 
@@ -238,7 +249,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsProjectiles);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch projectiles" });
+      return gracefulQuery("projectiles")(error, res);
     }
   });
 
@@ -248,7 +259,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsTrinkets);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch trinkets" });
+      return gracefulQuery("trinkets")(error, res);
     }
   });
 
@@ -258,7 +269,7 @@ export function registerOpenRTSRoutes(app: Express) {
       const result = await db.select().from(openrtsMapStyles);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch map styles" });
+      return gracefulQuery("map-styles")(error, res);
     }
   });
 
