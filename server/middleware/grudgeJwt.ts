@@ -1,18 +1,15 @@
 /**
  * Grudge JWT Verification Middleware
- * Hub-and-spoke model: all tokens originate from auth-gateway (configurable via AUTH_GATEWAY_URL env)
- * This middleware verifies them locally (fast) or via auth-gateway (fallback).
+ * Direct-DB mode: all tokens are signed locally by grudgeAuth.ts.
+ * Verified locally with SESSION_SECRET — no external gateway dependency.
  */
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const AUTH_GATEWAY = process.env.AUTH_GATEWAY_URL || "https://auth-gateway-flax.vercel.app";
-
-// SESSION_SECRET MUST match auth-gateway. If unset, local verify always fails → remote fallback.
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
 if (!process.env.SESSION_SECRET) {
-  console.warn("⚠️  SESSION_SECRET not set — JWT local verification disabled, all requests will hit auth-gateway remotely");
+  console.warn("⚠️  SESSION_SECRET not set — JWT verification will fail for all requests");
 }
 
 /** Shape of the JWT payload issued by auth-gateway */
@@ -45,8 +42,9 @@ function extractToken(req: Request): string | null {
   return null;
 }
 
-/** Try local JWT verification first (no network round-trip). */
-function verifyLocally(token: string): GrudgeUser | null {
+/** Verify JWT locally using SESSION_SECRET. */
+function verifyToken(token: string): GrudgeUser | null {
+  if (!SESSION_SECRET) return null;
   try {
     const decoded = jwt.verify(token, SESSION_SECRET) as Record<string, any>;
     if (!decoded.grudgeId) return null;
@@ -54,40 +52,9 @@ function verifyLocally(token: string): GrudgeUser | null {
       grudgeId: decoded.grudgeId,
       username: decoded.username || "Player",
       userId: decoded.userId || decoded.sub || decoded.grudgeId,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** Fallback: call auth-gateway /api/verify to validate the token remotely. */
-async function verifyRemotely(token: string): Promise<GrudgeUser | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const res = await fetch(`${AUTH_GATEWAY}/api/verify`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!res.ok) return null;
-
-    const data = await res.json() as Record<string, any>;
-    if (!data.success || !data.grudgeId) return null;
-
-    return {
-      grudgeId: data.grudgeId,
-      username: data.username || data.user?.username || "Player",
-      userId: data.user?.id || data.grudgeId,
-      role: data.user?.role,
-      isPremium: data.user?.isPremium,
-      isGuest: data.user?.isGuest,
+      role: decoded.role,
+      isPremium: decoded.isPremium,
+      isGuest: decoded.isGuest,
     };
   } catch {
     return null;
@@ -100,20 +67,13 @@ async function verifyRemotely(token: string): Promise<GrudgeUser | null> {
  * Require a valid Grudge JWT. Returns 401 if missing/invalid.
  * Attaches `req.grudgeUser` on success.
  */
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  // Fast path: local verify
-  let user = verifyLocally(token);
-
-  // Slow path: remote verify (handles key rotation, different secrets, etc.)
-  if (!user) {
-    user = await verifyRemotely(token);
-  }
-
+  const user = verifyToken(token);
   if (!user) {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
@@ -126,13 +86,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
  * Optional auth — attaches `req.grudgeUser` if a valid token is present,
  * but continues even if not. Use for endpoints that work with or without auth.
  */
-export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const token = extractToken(req);
   if (token) {
-    let user = verifyLocally(token);
-    if (!user) {
-      user = await verifyRemotely(token);
-    }
+    const user = verifyToken(token);
     if (user) {
       req.grudgeUser = user;
     }
