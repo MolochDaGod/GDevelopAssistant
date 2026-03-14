@@ -199,7 +199,7 @@ export async function registerAccount(username: string, password: string, email?
   return data;
 }
 
-/** Bridge Puter.js auth to a Grudge JWT. Call after puter.auth.signIn(). */
+/** Bridge Grudge Cloud (Puter) auth to a Grudge JWT. Call after puter.auth.signIn(). */
 export async function loginWithPuter(puterUuid: string, puterUsername: string) {
   const res = await fetch('/api/auth/puter', {
     method: 'POST',
@@ -232,6 +232,28 @@ export async function loginAsGuest(deviceId?: string) {
 export async function loginWithGoogle(returnUrl?: string) {
   const state = encodeURIComponent(returnUrl || window.location.href);
   const res = await fetch(`/api/auth/google?state=${state}`);
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url;
+  }
+  return data;
+}
+
+/** Initiate Discord OAuth — returns { url } to redirect to. */
+export async function loginWithDiscord(returnUrl?: string) {
+  const state = encodeURIComponent(returnUrl || window.location.href);
+  const res = await fetch(`/api/auth/discord?state=${state}`);
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url;
+  }
+  return data;
+}
+
+/** Initiate GitHub OAuth — returns { url } to redirect to. */
+export async function loginWithGitHub(returnUrl?: string) {
+  const state = encodeURIComponent(returnUrl || window.location.href);
+  const res = await fetch(`/api/auth/github?state=${state}`);
   const data = await res.json();
   if (data.url) {
     window.location.href = data.url;

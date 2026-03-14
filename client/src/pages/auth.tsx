@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,13 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, Eye, EyeOff, Gamepad2, Wallet, Shield, MessageSquare, Github, Phone, Chrome } from "lucide-react";
 import {
   storeAuth,
+  captureAuthCallback,
   loginWithPassword,
   registerAccount,
   loginAsGuest,
   loginWithGoogle,
+  loginWithDiscord,
+  loginWithGitHub,
   loginWithWallet,
   sendPhoneCode,
   verifyPhoneCode,
@@ -22,7 +25,8 @@ import {
 export default function AuthPage() {
   const [, navigate] = useLocation();
   const search = useSearch();
-  const returnUrl = new URLSearchParams(search).get("return") || "/";
+  const params = new URLSearchParams(search);
+  const returnUrl = params.get("return") || "/";
 
   // Form state
   const [loginUsername, setLoginUsername] = useState("");
@@ -38,6 +42,40 @@ export default function AuthPage() {
   // Loading / error
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Capture OAuth callback tokens on mount ──
+  useEffect(() => {
+    // If we have ?error= from a failed OAuth redirect, show it
+    const errorParam = params.get("error");
+    if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        google_token_failed: "Google sign-in failed — please try again",
+        google_userinfo_failed: "Could not fetch Google profile",
+        google_auth_failed: "Google authentication failed",
+        discord_token_failed: "Discord sign-in failed — please try again",
+        discord_userinfo_failed: "Could not fetch Discord profile",
+        discord_auth_failed: "Discord authentication failed",
+        github_token_failed: "GitHub sign-in failed — please try again",
+        github_userinfo_failed: "Could not fetch GitHub profile",
+        github_auth_failed: "GitHub authentication failed",
+      };
+      setError(errorMessages[errorParam] || `Authentication failed: ${errorParam.replace(/_/g, " ")}`);
+      // Clean error from URL
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("error");
+      window.history.replaceState({}, "", clean.pathname + clean.search);
+      return;
+    }
+
+    // Capture token from OAuth callback redirect (?token=...&grudgeId=...)
+    if (params.get("token")) {
+      const captured = captureAuthCallback();
+      if (captured) {
+        navigate(returnUrl, { replace: true });
+        return;
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSuccess = () => {
     navigate(returnUrl, { replace: true });
@@ -91,17 +129,17 @@ export default function AuthPage() {
     }
   };
 
-  // ── Puter Sign-In ──
-  const handlePuter = async () => {
-    setLoading("puter");
+  // ── Grudge Cloud Sign-In (Puter SSO) ──
+  const handleGrudgeCloud = async () => {
+    setLoading("grudge-cloud");
     setError(null);
     try {
-      if (!window.puter) {
-        return handleError("Puter SDK not loaded");
+      if (!(window as any).puter) {
+        return handleError("Grudge Cloud is not available — try another sign-in method");
       }
-      await window.puter.auth.signIn();
-      const user = await window.puter.auth.getUser();
-      if (!user?.uuid) return handleError("Puter sign-in failed");
+      await (window as any).puter.auth.signIn();
+      const user = await (window as any).puter.auth.getUser();
+      if (!user?.uuid) return handleError("Grudge Cloud sign-in failed");
       const res = await fetch("/api/auth/puter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,9 +150,9 @@ export default function AuthPage() {
         storeAuth({ ...data, isPuter: true });
         return onSuccess();
       }
-      handleError(data.error || "Puter authentication failed");
+      handleError(data.error || "Grudge Cloud authentication failed");
     } catch {
-      handleError("Puter sign-in failed");
+      handleError("Grudge Cloud sign-in failed — try another method");
     }
   };
 
@@ -123,19 +161,17 @@ export default function AuthPage() {
     setLoading(provider);
     setError(null);
     try {
+      const callbackUrl = window.location.origin + `/auth?return=${encodeURIComponent(returnUrl)}`;
       if (provider === "google") {
-        await loginWithGoogle(window.location.origin + `/auth?return=${encodeURIComponent(returnUrl)}`);
-        return;
+        await loginWithGoogle(callbackUrl);
+      } else if (provider === "discord") {
+        await loginWithDiscord(callbackUrl);
+      } else if (provider === "github") {
+        await loginWithGitHub(callbackUrl);
       }
-      const res = await fetch(`/api/auth/${provider}?state=${encodeURIComponent(window.location.origin + `/auth?return=${encodeURIComponent(returnUrl)}`)}`);
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      handleError(data.error || `${provider} auth failed`);
+      // The above functions redirect the browser — if we get here, something failed
     } catch {
-      handleError(`${provider} auth failed`);
+      handleError(`${provider} auth failed — service may not be configured`);
     }
   };
 
@@ -254,13 +290,13 @@ export default function AuthPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={handlePuter}
+                onClick={handleGrudgeCloud}
                 disabled={!!loading}
                 className="border-stone-600 hover:bg-stone-800 flex flex-col items-center gap-1 h-auto py-3 text-stone-300"
-                title="Sign in with Puter"
+                title="Sign in with Grudge Cloud"
               >
-                {isLoading("puter") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-5 w-5 text-green-400" />}
-                <span className="text-[10px]">Puter</span>
+                {isLoading("grudge-cloud") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-5 w-5 text-green-400" />}
+                <span className="text-[10px]">Grudge</span>
               </Button>
               <Button
                 variant="outline"
@@ -447,7 +483,7 @@ export default function AuthPage() {
 
             {/* Footer */}
             <p className="text-stone-600 text-xs text-center pt-2">
-              Your GRUDGE ID works across all GRUDGE games. Sign in with Puter for Premium features.
+              Your GRUDGE ID is your universal gaming passport across all GRUDGE games.
             </p>
             <div className="text-stone-600 text-xs text-center pt-1">
               <a href="/privacy" className="hover:text-stone-400 underline">Privacy Policy</a>
