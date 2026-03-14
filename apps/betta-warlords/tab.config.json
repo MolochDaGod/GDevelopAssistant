@@ -1,0 +1,21 @@
+{
+  "slug": "betta-warlords",
+  "title": "Betta Warlords",
+  "version": "1.0.0",
+  "description": "Underwater ocean RPG with turn-based combat, 8 betta breeds, 4 classes, skill trees, world map exploration, and AI dialogue. The flagship Grudge Studios title.",
+  "routes": [{ "path": "/betta-warlords", "entry": "tabs/betta-warlords/index.tsx" }],
+  "assets": {
+    "sprites": "assets/betta-warlords/sprites/",
+    "backgrounds": "assets/betta-warlords/backgrounds/"
+  },
+  "features": [
+    "sprite-loader",
+    "character-loader",
+    "battle-system",
+    "world-map",
+    "skill-trees",
+    "ai-dialogue",
+    "puter-auth"
+  ],
+  "externalUrl": "https://standalone-grudge.vercel.app/play"
+}

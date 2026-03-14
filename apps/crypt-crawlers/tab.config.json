@@ -1,0 +1,18 @@
+{
+  "slug": "crypt-crawlers",
+  "title": "Crypt Crawlers",
+  "version": "1.0.0",
+  "description": "Canvas-based dungeon crawler with BSP map generation, equipment drops, 6 enemy types, traps, and cyberpunk GUI. Top-down action RPG gameplay.",
+  "routes": [{ "path": "/crypt-crawlers", "entry": "tabs/crypt-crawlers/index.tsx" }],
+  "assets": {
+    "sprites": "assets/crypt-crawlers/sprites/",
+    "gui": "assets/crypt-crawlers/gui/"
+  },
+  "features": [
+    "sprite-loader",
+    "dungeon-generation",
+    "equipment-system",
+    "combat"
+  ],
+  "externalUrl": "https://standalone-grudge.vercel.app/dungeon-crawler"
+}
