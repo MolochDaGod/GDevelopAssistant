@@ -2,7 +2,7 @@ export default function BettaWarlords() {
   return (
     <div className="w-full h-full" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
       <iframe
-        src="https://standalone-grudge.vercel.app/play"
+        src="https://grudge-wars.vercel.app/play"
         title="Betta Warlords"
         className="w-full h-full border-0"
         style={{ minHeight: 'calc(100vh - 3.5rem)' }}

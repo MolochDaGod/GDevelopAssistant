@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GAME_URL = 'https://standalone-grudge.vercel.app/dungeon-crawler';
+const GAME_URL = 'https://grudge-wars.vercel.app/dungeon-crawler';
 
 export default function CryptCrawlersTab() {
   return (

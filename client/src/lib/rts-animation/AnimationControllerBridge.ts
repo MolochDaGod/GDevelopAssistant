@@ -20,16 +20,16 @@ export interface QueuedAnimation {
 
 export class AnimationControllerBridge {
   private animationLibrary: AnimationLibrary;
-  private debugger: AnimationDebugger;
+  private animDebugger: AnimationDebugger;
   private characterQueues: Map<string, QueuedAnimation[]> = new Map();
   private activeCallbacks: Map<string, AnimationCallback> = new Map();
   private parameterMap: Map<string, Record<AnimationParameter, number>> = new Map();
   private transitionRules: Map<string, Set<string>> = new Map();
   private customBlendCurves: Map<string, (t: number) => number> = new Map();
 
-  constructor(animationLibrary: AnimationLibrary, debugger?: AnimationDebugger) {
+  constructor(animationLibrary: AnimationLibrary, animDebugger?: AnimationDebugger) {
     this.animationLibrary = animationLibrary;
-    this.debugger = debugger || new AnimationDebugger(false);
+    this.animDebugger = animDebugger || new AnimationDebugger(false);
     this.setupDefaultTransitions();
   }
 
@@ -103,8 +103,8 @@ export class AnimationControllerBridge {
 
     // Track in debugger
     const clip = this.animationLibrary.getClip(animationName);
-    if (this.debugger && clip) {
-      this.debugger.trackAnimationStart(characterId, animationName, clip.duration, blendTime);
+    if (this.animDebugger && clip) {
+      this.animDebugger.trackAnimationStart(characterId, animationName, clip.duration, blendTime);
     }
 
     // Store callbacks
@@ -134,10 +134,10 @@ export class AnimationControllerBridge {
     onComplete?: () => void,
     blendTime: number = 0.2
   ): THREE.AnimationAction | null {
-    if (this.debugger) {
+    if (this.animDebugger) {
       const clip = this.animationLibrary.getClip(animationName);
       if (clip) {
-        this.debugger.trackAnimationStart(characterId, animationName, clip.duration, blendTime);
+        this.animDebugger.trackAnimationStart(characterId, animationName, clip.duration, blendTime);
       }
     }
 
@@ -160,8 +160,8 @@ export class AnimationControllerBridge {
     const fromAnimation = animator.currentAction.getClip().name;
     const adjustedBlendTime = blendTime || this.getOptimalBlendTime(fromAnimation, toAnimation);
 
-    if (this.debugger) {
-      this.debugger.trackAnimationBlend(
+    if (this.animDebugger) {
+      this.animDebugger.trackAnimationBlend(
         characterId,
         fromAnimation,
         toAnimation,
@@ -246,10 +246,10 @@ export class AnimationControllerBridge {
     this.animationLibrary.stopAnimation(characterId, fadeOut);
     this.activeCallbacks.delete(characterId);
 
-    if (this.debugger) {
+    if (this.animDebugger) {
       const animator = this.animationLibrary.getAnimator(characterId);
       if (animator?.currentAction) {
-        this.debugger.trackAnimationEnd(
+        this.animDebugger.trackAnimationEnd(
           characterId,
           animator.currentAction.getClip().name
         );
@@ -315,11 +315,11 @@ export class AnimationControllerBridge {
     state: any;
     conflicts: string[];
   } | null {
-    if (!this.debugger) return null;
+    if (!this.animDebugger) return null;
 
     return {
-      transitions: this.debugger.analyzeTransitions('all'),
-      state: this.debugger.getAllCharacterStates(),
+      transitions: this.animDebugger.analyzeTransitions('all'),
+      state: this.animDebugger.getAllCharacterStates(),
       conflicts: []
     };
   }
@@ -328,7 +328,7 @@ export class AnimationControllerBridge {
    * Export debugging data
    */
   exportDebugData(): string {
-    return this.debugger.exportData();
+    return this.animDebugger.exportData();
   }
 
   // Private helpers
@@ -403,7 +403,7 @@ export class AnimationControllerBridge {
 
 export function createAnimationControllerBridge(
   library: AnimationLibrary,
-  debugger?: AnimationDebugger
+  animDebugger?: AnimationDebugger
 ): AnimationControllerBridge {
-  return new AnimationControllerBridge(library, debugger);
+  return new AnimationControllerBridge(library, animDebugger);
 }

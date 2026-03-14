@@ -6,8 +6,12 @@ import * as schema from "../shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
+// Schema-aware db type helper
+function _createDb(client: Pool) { return drizzle({ client, schema }); }
+type DbType = ReturnType<typeof _createDb>;
+
 let _pool: Pool | null = null;
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: DbType | null = null;
 
 function getPool(): Pool {
   if (!_pool) {
@@ -21,7 +25,7 @@ function getPool(): Pool {
   return _pool;
 }
 
-function getDb(): ReturnType<typeof drizzle> {
+function getDb(): DbType {
   if (!_db) {
     _db = drizzle({ client: getPool(), schema });
   }
@@ -40,7 +44,7 @@ export const pool = new Proxy({} as Pool, {
   },
 });
 
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+export const db = new Proxy({} as DbType, {
   get(_target, prop) {
     return Reflect.get(getDb(), prop);
   },

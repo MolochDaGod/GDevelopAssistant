@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GAME_URL = 'https://standalone-grudge.vercel.app/play';
+const GAME_URL = 'https://grudge-wars.vercel.app/play';
 
 export default function BettaWarlordsTab() {
   return (

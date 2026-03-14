@@ -994,7 +994,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRtsProject(insertProject: InsertRtsProject): Promise<RtsProject> {
-    const [project] = await db.insert(rtsProjects).values(insertProject).returning();
+    const [project] = await db.insert(rtsProjects).values(insertProject as any).returning();
     return project;
   }
 

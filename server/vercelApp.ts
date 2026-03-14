@@ -323,7 +323,6 @@ app.get("/api/settings", requireDb, async (req, res) => {
 // ── Skill Trees ──
 app.get("/api/skill-trees", requireDb, async (_req, res) => {
   try {
-    // @ts-expect-error - drizzle query proxy
     const trees = await db.query.skillTrees.findMany();
     res.json(trees);
   } catch { res.status(500).json({ error: "Failed to fetch skill trees" }); }

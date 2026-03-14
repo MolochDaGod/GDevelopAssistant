@@ -1,7 +1,18 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, jsonb, integer, boolean, index } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema as _createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Workaround: drizzle-zod 0.7.x type inference breaks .omit()/.pick() on
+// the schema returned by createInsertSchema.  This typed shim lets
+// downstream .omit() calls compile while z.infer resolves to `any`
+// (preserving assignability to drizzle insert/update helpers).
+type _OmittableZod = z.ZodType<any> & {
+  omit(mask: Record<string, true>): z.ZodType<any>;
+  pick(mask: Record<string, true>): z.ZodType<any>;
+};
+const createInsertSchema: (...args: Parameters<typeof _createInsertSchema>) => _OmittableZod =
+  _createInsertSchema as any;
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
@@ -689,13 +700,13 @@ export const accounts = pgTable("accounts", {
   lastLoginAt: timestamp("last_login_at"),
   updatedAt: timestamp("updated_at").default(sql`now()`),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
-}, (table) => ({
-  grudgeIdIdx: index("accounts_grudge_id_idx").on(table.grudgeId),
-  puterUuidIdx: index("accounts_puter_uuid_idx").on(table.puterUuid),
-  walletIdx: index("accounts_wallet_idx").on(table.walletAddress),
-  discordIdx: index("accounts_discord_id_idx").on(table.discordId),
-  githubIdx: index("accounts_github_id_idx").on(table.githubId),
-}));
+}, (table) => [
+  index("accounts_grudge_id_idx").on(table.grudgeId),
+  index("accounts_puter_uuid_idx").on(table.puterUuid),
+  index("accounts_wallet_idx").on(table.walletAddress),
+  index("accounts_discord_id_idx").on(table.discordId),
+  index("accounts_github_id_idx").on(table.githubId),
+]);
 
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true });
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
@@ -746,10 +757,10 @@ export const grudgeCharacters = pgTable("grudge_characters", {
   isGuest: boolean("is_guest").default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
-}, (table) => ({
-  accountIdIdx: index("grudge_chars_account_id_idx").on(table.accountId),
-  grudgeIdIdx: index("grudge_chars_grudge_id_idx").on(table.grudgeId),
-}));
+}, (table) => [
+  index("grudge_chars_account_id_idx").on(table.accountId),
+  index("grudge_chars_grudge_id_idx").on(table.grudgeId),
+]);
 
 export const insertGrudgeCharacterSchema = createInsertSchema(grudgeCharacters).omit({ id: true, createdAt: true });
 export type InsertGrudgeCharacter = z.infer<typeof insertGrudgeCharacterSchema>;

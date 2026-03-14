@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GAME_URL = 'https://standalone-grudge.vercel.app/grudge-box';
+const GAME_URL = 'https://grudge-wars.vercel.app/grudge-box';
 
 export default function GrudgeBoxTab() {
   return (
