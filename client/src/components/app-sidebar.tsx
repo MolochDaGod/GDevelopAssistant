@@ -142,6 +142,12 @@ const featured3DGames = [
     icon: Sword,
     badge: "RPG",
   },
+  {
+    title: "Dungeon Crawler",
+    url: "/dungeon-crawler",
+    icon: Swords,
+    badge: "Dungeon",
+  },
 ];
 
 const arcadeGames = [
