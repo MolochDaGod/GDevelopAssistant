@@ -1,38 +1,33 @@
 /**
  * ALE_HERMES - AI Storage Agent
- * 
- * An intelligent storage orchestration service that manages Grudge users' 
- * object storage and app storage. Named after Hermes, the messenger of gods,
- * this agent handles all file operations with speed and precision.
- * 
+ *
+ * Intelligent storage orchestration service for Grudge users.
+ * Proxies file operations to the Grudge backend asset-service
+ * at assets-api.grudge-studio.com.
+ *
  * Features:
  * - User-isolated storage (users/{userId}/{namespace}/{resource})
  * - Namespace support: projects, assets, backups, runtime, app-storage
- * - Metadata tracking and audit logging
+ * - Metadata tracking and audit logging (MySQL)
  * - Quota management and enforcement
  * - Integration with existing asset pipeline
  */
 
-// @replit/object-storage only works on Replit — dynamically import to avoid crash on Vercel
-let ReplitClient: any = null;
-try {
-  if (process.env.REPL_ID || process.env.REPLIT_DEPLOYMENT) {
-    ReplitClient = require("@replit/object-storage").Client;
-  }
-} catch {}
 import { db } from "../db";
-import { 
-  userObjects, 
-  storageAuditLogs, 
+import {
+  userObjects,
+  storageAuditLogs,
   userStorageQuotas,
   type InsertUserObject,
   type InsertStorageAuditLog,
   type UserObject,
-  type UserStorageQuota
+  type UserStorageQuota,
 } from "../../shared/schema";
 import { eq, and, like, desc, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { Readable } from "stream";
+
+const ASSETS_API = process.env.ASSETS_API_URL || process.env.VITE_ASSETS_URL || "https://assets-api.grudge-studio.com";
 
 export type StorageNamespace = "projects" | "assets" | "backups" | "runtime" | "app-storage";
 
@@ -57,31 +52,29 @@ export interface AuditContext {
 }
 
 export class AleHermesService {
-  private client: any;
   private agentName = "ALE_HERMES";
 
   constructor() {
-    if (!ReplitClient) {
-      console.warn(`[${this.agentName}] @replit/object-storage unavailable — storage ops will no-op`);
-      this.client = null;
-    } else {
-      this.client = new ReplitClient();
-    }
+    console.log(`[${this.agentName}] Initialized → backend at ${ASSETS_API}`);
   }
 
+  // ── Internal helpers ─────────────────────────────────────────
   private buildObjectKey(userId: string, namespace: StorageNamespace, filename: string): string {
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
     return `users/${userId}/${namespace}/${sanitizedFilename}`;
   }
 
-  private extractFilenameFromKey(objectKey: string): string {
-    const parts = objectKey.split("/");
-    return parts[parts.length - 1] || objectKey;
-  }
-
   private calculateChecksum(data: Buffer | string): string {
     const content = typeof data === "string" ? Buffer.from(data) : data;
     return createHash("md5").update(content).digest("hex");
+  }
+
+  private async backendFetch(path: string, init?: RequestInit): Promise<globalThis.Response> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(init?.headers as Record<string, string> || {}),
+    };
+    return fetch(`${ASSETS_API}${path}`, { ...init, headers });
   }
 
   private async logAudit(
@@ -114,7 +107,7 @@ export class AleHermesService {
 
   private async updateQuota(userId: string, deltaBytes: number, deltaCount: number): Promise<void> {
     const existing = await db.select().from(userStorageQuotas).where(eq(userStorageQuotas.userId, userId)).limit(1);
-    
+
     if (existing.length === 0) {
       await db.insert(userStorageQuotas).values({
         userId,
@@ -122,7 +115,8 @@ export class AleHermesService {
         objectCount: Math.max(0, deltaCount),
       });
     } else {
-      await db.update(userStorageQuotas)
+      await db
+        .update(userStorageQuotas)
         .set({
           usedStorageBytes: sql`GREATEST(0, ${userStorageQuotas.usedStorageBytes} + ${deltaBytes})`,
           objectCount: sql`GREATEST(0, ${userStorageQuotas.objectCount} + ${deltaCount})`,
@@ -132,6 +126,7 @@ export class AleHermesService {
     }
   }
 
+  // ── Quota management ─────────────────────────────────────────
   async getQuota(userId: string): Promise<UserStorageQuota | null> {
     const result = await db.select().from(userStorageQuotas).where(eq(userStorageQuotas.userId, userId)).limit(1);
     if (result.length === 0) {
@@ -145,16 +140,17 @@ export class AleHermesService {
   async checkQuota(userId: string, additionalBytes: number): Promise<{ allowed: boolean; reason?: string }> {
     const quota = await this.getQuota(userId);
     if (!quota) return { allowed: true };
-    
+
     if (quota.usedStorageBytes + additionalBytes > quota.maxStorageBytes) {
       return {
         allowed: false,
-        reason: `Storage quota exceeded. Used: ${quota.usedStorageBytes}, Max: ${quota.maxStorageBytes}, Requested: ${additionalBytes}`
+        reason: `Storage quota exceeded. Used: ${quota.usedStorageBytes}, Max: ${quota.maxStorageBytes}, Requested: ${additionalBytes}`,
       };
     }
     return { allowed: true };
   }
 
+  // ── Upload operations (proxy to backend asset-service) ───────
   async uploadFromText(
     userId: string,
     filename: string,
@@ -173,11 +169,22 @@ export class AleHermesService {
     }
 
     try {
-      const result = await this.client.uploadFromText(objectKey, content);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "upload", objectKey, false, context, result.error?.message, fileSize);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch("/assets/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          objectKey,
+          content,
+          contentType: options.contentType || "text/plain",
+          userId,
+          namespace,
+          isPublic: options.isPublic || false,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Upload failed" }));
+        await this.logAudit(userId, "upload", objectKey, false, context, errData.error, fileSize);
+        return { ok: false, error: errData.error };
       }
 
       const checksum = this.calculateChecksum(content);
@@ -196,7 +203,7 @@ export class AleHermesService {
 
       await db.insert(userObjects).values(objectRecord).onConflictDoUpdate({
         target: userObjects.objectKey,
-        set: { ...objectRecord, updatedAt: new Date() }
+        set: { ...objectRecord, updatedAt: new Date() },
       });
 
       await this.updateQuota(userId, fileSize, 1);
@@ -228,11 +235,18 @@ export class AleHermesService {
     }
 
     try {
-      const result = await this.client.uploadFromBytes(objectKey, content);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "upload", objectKey, false, context, result.error?.message, fileSize);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch("/assets/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": options.contentType || "application/octet-stream",
+        },
+        body: content,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Upload failed" }));
+        await this.logAudit(userId, "upload", objectKey, false, context, errData.error, fileSize);
+        return { ok: false, error: errData.error };
       }
 
       const checksum = this.calculateChecksum(content);
@@ -251,7 +265,7 @@ export class AleHermesService {
 
       await db.insert(userObjects).values(objectRecord).onConflictDoUpdate({
         target: userObjects.objectKey,
-        set: { ...objectRecord, updatedAt: new Date() }
+        set: { ...objectRecord, updatedAt: new Date() },
       });
 
       await this.updateQuota(userId, fileSize, 1);
@@ -272,46 +286,24 @@ export class AleHermesService {
     options: UploadOptions = {},
     context: AuditContext = {}
   ): Promise<{ ok: boolean; objectKey?: string; error?: string }> {
-    const namespace = options.namespace || "assets";
-    const objectKey = this.buildObjectKey(userId, namespace, filename);
-
-    try {
-      await this.client.uploadFromStream(objectKey, stream);
-
-      const objectRecord: InsertUserObject = {
-        userId,
-        objectKey,
-        namespace,
-        filename,
-        contentType: options.contentType || "application/octet-stream",
-        fileSize: 0,
-        tags: options.tags || [],
-        metadata: options.metadata || {},
-        isPublic: options.isPublic || false,
-      };
-
-      await db.insert(userObjects).values(objectRecord).onConflictDoUpdate({
-        target: userObjects.objectKey,
-        set: { ...objectRecord, updatedAt: new Date() }
-      });
-
-      await this.updateQuota(userId, 0, 1);
-      await this.logAudit(userId, "upload", objectKey, true, context);
-
-      return { ok: true, objectKey };
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error";
-      await this.logAudit(userId, "upload", objectKey, false, context, errorMsg);
-      return { ok: false, error: errorMsg };
+    // Collect stream into buffer and delegate to uploadFromBytes
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
+    const buffer = Buffer.concat(chunks);
+    return this.uploadFromBytes(userId, filename, buffer, options, context);
   }
 
+  // ── Download operations (proxy to backend) ───────────────────
   async downloadAsText(
     userId: string,
     objectKey: string,
     context: AuditContext = {}
   ): Promise<{ ok: boolean; value?: string; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
 
@@ -321,19 +313,16 @@ export class AleHermesService {
     }
 
     try {
-      const result = await this.client.downloadAsText(objectKey);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "download", objectKey, false, context, result.error?.message);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch(`/assets/download?key=${encodeURIComponent(objectKey)}`);
+      if (!res.ok) {
+        await this.logAudit(userId, "download", objectKey, false, context, `HTTP ${res.status}`);
+        return { ok: false, error: `Download failed: ${res.status}` };
       }
 
-      await db.update(userObjects)
-        .set({ lastAccessedAt: new Date() })
-        .where(eq(userObjects.objectKey, objectKey));
-
+      const value = await res.text();
+      await db.update(userObjects).set({ lastAccessedAt: new Date() }).where(eq(userObjects.objectKey, objectKey));
       await this.logAudit(userId, "download", objectKey, true, context);
-      return { ok: true, value: result.value };
+      return { ok: true, value };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       await this.logAudit(userId, "download", objectKey, false, context, errorMsg);
@@ -346,7 +335,9 @@ export class AleHermesService {
     objectKey: string,
     context: AuditContext = {}
   ): Promise<{ ok: boolean; value?: Buffer; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
 
@@ -356,19 +347,16 @@ export class AleHermesService {
     }
 
     try {
-      const result = await this.client.downloadAsBytes(objectKey);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "download", objectKey, false, context, result.error?.message);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch(`/assets/download?key=${encodeURIComponent(objectKey)}`);
+      if (!res.ok) {
+        await this.logAudit(userId, "download", objectKey, false, context, `HTTP ${res.status}`);
+        return { ok: false, error: `Download failed: ${res.status}` };
       }
 
-      await db.update(userObjects)
-        .set({ lastAccessedAt: new Date() })
-        .where(eq(userObjects.objectKey, objectKey));
-
+      const value = Buffer.from(await res.arrayBuffer());
+      await db.update(userObjects).set({ lastAccessedAt: new Date() }).where(eq(userObjects.objectKey, objectKey));
       await this.logAudit(userId, "download", objectKey, true, context);
-      return { ok: true, value: Array.isArray(result.value) ? result.value[0] : result.value };
+      return { ok: true, value };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       await this.logAudit(userId, "download", objectKey, false, context, errorMsg);
@@ -381,7 +369,9 @@ export class AleHermesService {
     objectKey: string,
     context: AuditContext = {}
   ): Promise<{ ok: boolean; value?: Readable; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
 
@@ -391,12 +381,14 @@ export class AleHermesService {
     }
 
     try {
-      const stream = this.client.downloadAsStream(objectKey);
-      
-      await db.update(userObjects)
-        .set({ lastAccessedAt: new Date() })
-        .where(eq(userObjects.objectKey, objectKey));
+      const res = await this.backendFetch(`/assets/download?key=${encodeURIComponent(objectKey)}`);
+      if (!res.ok) {
+        await this.logAudit(userId, "download", objectKey, false, context, `HTTP ${res.status}`);
+        return { ok: false, error: `Download failed: ${res.status}` };
+      }
 
+      const stream = Readable.fromWeb(res.body as any);
+      await db.update(userObjects).set({ lastAccessedAt: new Date() }).where(eq(userObjects.objectKey, objectKey));
       await this.logAudit(userId, "download", objectKey, true, context);
       return { ok: true, value: stream };
     } catch (err) {
@@ -406,6 +398,7 @@ export class AleHermesService {
     }
   }
 
+  // ── List / metadata / delete ─────────────────────────────────
   async listObjects(
     userId: string,
     options: ListOptions = {},
@@ -415,19 +408,17 @@ export class AleHermesService {
       let query = db.select().from(userObjects).where(eq(userObjects.userId, userId));
 
       if (options.namespace) {
-        query = db.select().from(userObjects)
-          .where(and(
-            eq(userObjects.userId, userId),
-            eq(userObjects.namespace, options.namespace)
-          ));
+        query = db
+          .select()
+          .from(userObjects)
+          .where(and(eq(userObjects.userId, userId), eq(userObjects.namespace, options.namespace)));
       }
 
       if (options.prefix) {
-        query = db.select().from(userObjects)
-          .where(and(
-            eq(userObjects.userId, userId),
-            like(userObjects.objectKey, `%${options.prefix}%`)
-          ));
+        query = db
+          .select()
+          .from(userObjects)
+          .where(and(eq(userObjects.userId, userId), like(userObjects.objectKey, `%${options.prefix}%`)));
       }
 
       const objects = await query
@@ -449,7 +440,9 @@ export class AleHermesService {
     objectKey: string,
     context: AuditContext = {}
   ): Promise<{ ok: boolean; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
 
@@ -461,11 +454,15 @@ export class AleHermesService {
     const fileSize = record[0].fileSize;
 
     try {
-      const result = await this.client.delete(objectKey);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "delete", objectKey, false, context, result.error?.message);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch("/assets/delete", {
+        method: "DELETE",
+        body: JSON.stringify({ objectKey }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Delete failed" }));
+        await this.logAudit(userId, "delete", objectKey, false, context, errData.error);
+        return { ok: false, error: errData.error };
       }
 
       await db.delete(userObjects).where(eq(userObjects.objectKey, objectKey));
@@ -487,7 +484,9 @@ export class AleHermesService {
     destNamespace: StorageNamespace = "assets",
     context: AuditContext = {}
   ): Promise<{ ok: boolean; newObjectKey?: string; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, sourceKey)))
       .limit(1);
 
@@ -506,11 +505,15 @@ export class AleHermesService {
     }
 
     try {
-      const result = await this.client.copy(sourceKey, destKey);
-      
-      if (!result.ok) {
-        await this.logAudit(userId, "copy", sourceKey, false, context, result.error?.message, undefined, destKey);
-        return { ok: false, error: result.error?.message };
+      const res = await this.backendFetch("/assets/copy", {
+        method: "POST",
+        body: JSON.stringify({ sourceKey, destKey }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Copy failed" }));
+        await this.logAudit(userId, "copy", sourceKey, false, context, errData.error, undefined, destKey);
+        return { ok: false, error: errData.error };
       }
 
       const newRecord: InsertUserObject = {
@@ -538,48 +541,37 @@ export class AleHermesService {
     }
   }
 
-  async objectExists(
-    userId: string,
-    objectKey: string
-  ): Promise<{ ok: boolean; exists?: boolean; error?: string }> {
+  async objectExists(userId: string, objectKey: string): Promise<{ ok: boolean; exists?: boolean; error?: string }> {
     try {
-      const record = await db.select().from(userObjects)
+      const record = await db
+        .select()
+        .from(userObjects)
         .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
         .limit(1);
-
-      if (record.length > 0) {
-        return { ok: true, exists: true };
-      }
-
-      const result = await this.client.exists(objectKey);
-      return { ok: true, exists: result.ok ? result.value : false };
+      return { ok: true, exists: record.length > 0 };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       return { ok: false, error: errorMsg };
     }
   }
 
-  async getObjectMetadata(
-    userId: string,
-    objectKey: string
-  ): Promise<UserObject | null> {
-    const records = await db.select().from(userObjects)
+  async getObjectMetadata(userId: string, objectKey: string): Promise<UserObject | null> {
+    const records = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
-
     return records[0] || null;
   }
 
   async updateObjectMetadata(
     userId: string,
     objectKey: string,
-    updates: {
-      tags?: string[];
-      metadata?: Record<string, unknown>;
-      isPublic?: boolean;
-    }
+    updates: { tags?: string[]; metadata?: Record<string, unknown>; isPublic?: boolean }
   ): Promise<{ ok: boolean; error?: string }> {
-    const record = await db.select().from(userObjects)
+    const record = await db
+      .select()
+      .from(userObjects)
       .where(and(eq(userObjects.userId, userId), eq(userObjects.objectKey, objectKey)))
       .limit(1);
 
@@ -588,7 +580,8 @@ export class AleHermesService {
     }
 
     try {
-      await db.update(userObjects)
+      await db
+        .update(userObjects)
         .set({
           ...(updates.tags && { tags: updates.tags }),
           ...(updates.metadata && { metadata: updates.metadata }),
@@ -596,7 +589,6 @@ export class AleHermesService {
           updatedAt: new Date(),
         })
         .where(eq(userObjects.objectKey, objectKey));
-
       return { ok: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
@@ -604,16 +596,14 @@ export class AleHermesService {
     }
   }
 
-  async getAuditLogs(
-    userId: string,
-    limit: number = 50
-  ): Promise<{ ok: boolean; logs?: any[]; error?: string }> {
+  async getAuditLogs(userId: string, limit: number = 50): Promise<{ ok: boolean; logs?: any[]; error?: string }> {
     try {
-      const logs = await db.select().from(storageAuditLogs)
+      const logs = await db
+        .select()
+        .from(storageAuditLogs)
         .where(eq(storageAuditLogs.userId, userId))
         .orderBy(desc(storageAuditLogs.createdAt))
         .limit(limit);
-
       return { ok: true, logs };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
