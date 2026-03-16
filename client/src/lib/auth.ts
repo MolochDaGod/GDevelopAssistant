@@ -94,6 +94,33 @@ export function redirectToLogin(customReturnUrl?: string) {
   window.location.href = `${AUTH_GATEWAY}?return=${returnUrl}`;
 }
 
+/**
+ * Capture auth data from URL query parameters after an auth-gateway redirect.
+ * Reads `token`, `grudge_id`, `user_id`, `username` from the URL and stores
+ * them via storeAuth. Cleans the params from the URL afterwards.
+ */
+export function captureAuthCallback(): void {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) return;
+
+  storeAuth({
+    token,
+    grudgeId: params.get('grudge_id') ?? undefined,
+    userId: params.get('user_id') ?? undefined,
+    username: params.get('username') ?? undefined,
+  });
+
+  // Remove auth params from the URL without causing a navigation
+  params.delete('token');
+  params.delete('grudge_id');
+  params.delete('user_id');
+  params.delete('username');
+  const newSearch = params.toString();
+  const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+  window.history.replaceState(null, '', newUrl);
+}
+
 /** Logout — clears tokens and redirects. */
 export function logout() {
   clearAuth();

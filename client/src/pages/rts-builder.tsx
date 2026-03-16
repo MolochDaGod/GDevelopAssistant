@@ -1052,6 +1052,46 @@ function EffectsPanel({ effects }: { effects: OpenRTSEffect[] }) {
   );
 }
 
+interface ModelCardProps {
+  model: RtsModel;
+  baseUrl: string;
+  testIdPrefix?: string;
+}
+
+function ModelCard({ model, baseUrl, testIdPrefix = "actor" }: ModelCardProps) {
+  return (
+    <Card
+      className="overflow-hidden hover-elevate"
+      data-testid={`card-${testIdPrefix}-${model.grudgeId}`}
+    >
+      <div className="h-20 w-full bg-muted flex items-center justify-center">
+        <Swords className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <CardContent className="p-2">
+        <div className="font-medium text-xs line-clamp-1">{model.displayName}</div>
+        <p className="text-[10px] text-muted-foreground font-mono">{model.grudgeId}</p>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <Badge variant="outline" className="text-[10px] capitalize">{model.category}</Badge>
+          <Badge variant="secondary" className="text-[10px]">{model.unitType}</Badge>
+          {model.customizable && <Badge className="text-[10px] bg-emerald-600">Custom</Badge>}
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-[10px] text-muted-foreground">{(model.sizeBytes / 1024).toFixed(0)} KB</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={() => window.open(`${baseUrl}/${model.file}`, "_blank")}
+          >
+            <ExternalLink className="h-3 w-3 mr-1" />
+            GLB
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ActorsPanel() {
   const [raceFilter, setRaceFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -1060,8 +1100,8 @@ function ActorsPanel() {
   const { data: rtsModelCatalog, isLoading } = useQuery<RtsModelCatalog>({
     queryKey: ["objectstore-rts-models"],
     queryFn: async () => {
-      const res = await fetch("https://molochdagod.github.io/ObjectStore/api/v1/rtsModels.json");
-      if (!res.ok) throw new Error("Failed to fetch RTS models");
+      const res = await fetch("/assets/models/rts/catalog.json");
+      if (!res.ok) throw new Error("Failed to load RTS model catalog");
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -1083,7 +1123,7 @@ function ActorsPanel() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open("https://molochdagod.github.io/ObjectStore/api/v1/rtsModels.json", "_blank")}
+            onClick={() => window.open("/assets/models/rts/catalog.json", "_blank")}
           >
             <ExternalLink className="mr-1 h-3 w-3" />
             API
@@ -1103,7 +1143,7 @@ function ActorsPanel() {
 
         {/* Race Filter */}
         <div className="flex gap-1 flex-wrap mb-2">
-          {["all", ...(rtsModelCatalog ? Object.keys(rtsModelCatalog.races) : [])].map((race) => {
+          {["all", ...Object.keys(rtsModelCatalog?.races ?? {})].map((race) => {
             const raceData = race !== "all" ? rtsModelCatalog?.races[race] : null;
             const count = race === "all"
               ? (rtsModelCatalog?.totalModels ?? 0)
@@ -1150,7 +1190,7 @@ function ActorsPanel() {
         ) : !rtsModelCatalog ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Swords className="mb-4 h-12 w-12 text-muted-foreground opacity-30" />
-            <p className="text-muted-foreground">Could not load models. Check ObjectStore API.</p>
+            <p className="text-muted-foreground">Could not load 3D model catalog.</p>
           </div>
         ) : (
           <>
@@ -1178,32 +1218,12 @@ function ActorsPanel() {
                     </div>
                     <div className="grid gap-2 grid-cols-2 lg:grid-cols-3">
                       {models.map((model) => (
-                        <Card key={model.grudgeId} className="overflow-hidden hover-elevate" data-testid={`card-actor-${model.grudgeId}`}>
-                          <div className="h-20 w-full bg-muted flex items-center justify-center">
-                            <Swords className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                          <CardContent className="p-2">
-                            <div className="font-medium text-xs line-clamp-1">{model.displayName}</div>
-                            <p className="text-[10px] text-muted-foreground font-mono">{model.grudgeId}</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              <Badge variant="outline" className="text-[10px] capitalize">{model.category}</Badge>
-                              <Badge variant="secondary" className="text-[10px]">{model.unitType}</Badge>
-                              {model.customizable && <Badge className="text-[10px] bg-emerald-600">Custom</Badge>}
-                            </div>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-[10px] text-muted-foreground">{(model.sizeBytes / 1024).toFixed(0)} KB</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-xs"
-                                onClick={() => window.open(`${rtsModelCatalog.baseUrl}/${model.file}`, "_blank")}
-                              >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                GLB
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <ModelCard
+                          key={model.grudgeId}
+                          model={model}
+                          baseUrl={rtsModelCatalog.baseUrl}
+                          testIdPrefix="actor"
+                        />
                       ))}
                     </div>
                   </div>
@@ -1226,31 +1246,12 @@ function ActorsPanel() {
                         m.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
                     })
                     .map((model) => (
-                    <Card key={model.grudgeId} className="overflow-hidden hover-elevate" data-testid={`card-actor-${model.grudgeId}`}>
-                      <div className="h-20 w-full bg-muted flex items-center justify-center">
-                        <Swords className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <CardContent className="p-2">
-                        <div className="font-medium text-xs line-clamp-1">{model.displayName}</div>
-                        <p className="text-[10px] text-muted-foreground font-mono">{model.grudgeId}</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          <Badge variant="outline" className="text-[10px] capitalize">{model.category}</Badge>
-                          <Badge variant="secondary" className="text-[10px]">{model.unitType}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[10px] text-muted-foreground">{(model.sizeBytes / 1024).toFixed(0)} KB</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-xs"
-                            onClick={() => window.open(`${rtsModelCatalog.baseUrl}/${model.file}`, "_blank")}
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            GLB
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ModelCard
+                      key={model.grudgeId}
+                      model={model}
+                      baseUrl={rtsModelCatalog.baseUrl}
+                      testIdPrefix="actor"
+                    />
                   ))}
                 </div>
               </div>
