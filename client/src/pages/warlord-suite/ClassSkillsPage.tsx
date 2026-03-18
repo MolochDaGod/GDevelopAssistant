@@ -1,151 +1,180 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Crown, Sword, Shield, Zap } from "lucide-react";
-import { CLASS_WEAPON_RESTRICTIONS, CLASS_ARMOR_RESTRICTIONS } from "@/lib/mmo-systems";
-import { GRUDA_WARS_HEROES } from "../../../../shared/grudaWarsHeroes";
+import {
+  CLASS_SKILL_TREES, CLASS_IDS,
+} from "../../../../shared/wcs/definitions/classSkillTrees";
+import {
+  ATTRIBUTES, ATTRIBUTE_IDS,
+  type AttributeDefinition,
+} from "../../../../shared/wcs/attributeSystem";
+import {
+  CLASS_ALLOWED_WEAPONS, CLASS_ALLOWED_ARMOR,
+} from "../../../../shared/wcs/classWeaponRestrictions";
+import { CLASS_DISPLAY_NAMES, type ClassId } from "../../../../shared/wcs/gameConstants";
 
-const CLASS_DEFS: Record<string, { name: string; desc: string; playstyle: string; icon: string }> = {
-  warrior: { name: "Warrior", desc: "Masters of melee combat who excel at absorbing damage and protecting allies. Warriors use heavy weapons and armor to dominate the battlefield.", playstyle: "Tank / Melee DPS", icon: "⚔️" },
-  mage: { name: "Mage", desc: "Wielders of arcane power who devastate enemies from range with elemental spells. Fragile but capable of massive area damage.", playstyle: "Ranged Magic DPS", icon: "🪄" },
-  rogue: { name: "Rogue", desc: "Stealthy assassins who strike from the shadows with deadly precision. High crit damage and evasion, but low durability.", playstyle: "Melee Burst DPS", icon: "🗡️" },
-  ranger: { name: "Ranger", desc: "Expert marksmen who fight from distance with bows, crossbows, and nature magic. Mobile and versatile with crowd control.", playstyle: "Ranged Physical DPS", icon: "🏹" },
-  cleric: { name: "Cleric", desc: "Holy warriors who heal allies and smite enemies with divine power. The backbone of any party with powerful support abilities.", playstyle: "Healer / Support", icon: "✝️" },
-  worge: { name: "Worge", desc: "Shape-shifters who transform between Bear (tank), Raptor (stealth DPS), and Bird (flight/utility) forms. Incredibly versatile.", playstyle: "Hybrid / Shape-shifter", icon: "🐻" },
+const CLASS_META: Record<string, { icon: string; desc: string; playstyle: string }> = {
+  warrior: { icon: "⚔️", desc: "Masters of melee combat who excel at absorbing damage and protecting allies. Warriors use heavy weapons and armor to dominate the battlefield.", playstyle: "Tank / Melee DPS" },
+  mage:    { icon: "🪄", desc: "Wielders of arcane power who devastate enemies from range with elemental spells. Fragile but capable of massive area damage.", playstyle: "Ranged Magic DPS" },
+  ranger:  { icon: "🏹", desc: "Expert marksmen who fight from distance with bows, crossbows, and nature magic. Mobile and versatile with crowd control.", playstyle: "Ranged Physical DPS" },
+  worge:   { icon: "🐻", desc: "Shape-shifters who transform between Bear (tank), Raptor (stealth DPS), and Bird (flight/utility) forms. Incredibly versatile.", playstyle: "Hybrid / Shape-shifter" },
 };
 
-export default function ClassSkillsPage() {
-  const [activeClass, setActiveClass] = useState("warrior");
-  const cls = CLASS_DEFS[activeClass];
-  const weapons = CLASS_WEAPON_RESTRICTIONS[activeClass] || [];
-  const armors = CLASS_ARMOR_RESTRICTIONS[activeClass] || [];
+// Map canonical class IDs — classSkillTrees uses 'worge', gameConstants uses 'worg'
+function getWeaponClassId(cls: string): ClassId {
+  return (cls === "worge" ? "worg" : cls) as ClassId;
+}
 
-  // Find matching hero from Gruda Wars heroes
-  const heroMatch = GRUDA_WARS_HEROES.find(h => h.classId === activeClass);
+export default function ClassSkillsPage() {
+  const [activeClass, setActiveClass] = useState<string>("warrior");
+  const meta = CLASS_META[activeClass];
+  const tree = CLASS_SKILL_TREES[activeClass];
+  const weaponClassId = getWeaponClassId(activeClass);
+  const weapons = CLASS_ALLOWED_WEAPONS[weaponClassId] || [];
+  const armors = CLASS_ALLOWED_ARMOR[weaponClassId] || [];
 
   return (
     <div className="p-4 space-y-4">
-      <Tabs value={activeClass} onValueChange={setActiveClass}>
-        <TabsList className="flex-wrap h-auto gap-1">
-          {Object.entries(CLASS_DEFS).map(([id, def]) => (
-            <TabsTrigger key={id} value={id} className="gap-1 text-xs">
-              <span>{def.icon}</span> {def.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {/* Class Tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {CLASS_IDS.map(cls => {
+          const m = CLASS_META[cls];
+          const active = activeClass === cls;
+          return (
+            <button
+              key={cls}
+              onClick={() => setActiveClass(cls)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-[var(--font-heading)] tracking-wide rounded transition-all ${
+                active ? "gilded-button" : "dark-button"
+              }`}
+            >
+              <span className="text-base">{m?.icon}</span>
+              {tree ? CLASS_SKILL_TREES[cls]?.className : cls}
+            </button>
+          );
+        })}
+      </div>
 
-        {Object.entries(CLASS_DEFS).map(([id, def]) => (
-          <TabsContent key={id} value={id}>
-            <ScrollArea className="h-[calc(100vh-220px)]">
-              <div className="space-y-4">
-                {/* Class Overview */}
-                <Card>
-                  <CardHeader className="py-3 px-4">
-                    <CardTitle className="flex items-center gap-2">
-                      <span className="text-2xl">{def.icon}</span>
-                      {def.name}
-                      <Badge variant="secondary">{def.playstyle}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2 px-4 space-y-3">
-                    <p className="text-sm">{def.desc}</p>
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-muted-foreground font-medium">Allowed Weapons:</span>
-                        <div className="flex gap-1 flex-wrap mt-1">
-                          {weapons.map(w => <Badge key={w} variant="outline" className="text-[9px] capitalize">{w.replace("_", " ")}</Badge>)}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground font-medium">Allowed Armor:</span>
-                        <div className="flex gap-1 flex-wrap mt-1">
-                          {armors.map(a => <Badge key={a} variant="outline" className="text-[9px] capitalize">{a}</Badge>)}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Hero abilities (if a canonical hero exists for this class) */}
-                {heroMatch && (
-                  <Card>
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Crown className="h-4 w-4 text-amber-500" />
-                        {heroMatch.name} — {heroMatch.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-2 px-4 space-y-3">
-                      <p className="text-sm text-muted-foreground">{heroMatch.description}</p>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Strengths:</span>
-                          <ul className="list-disc list-inside mt-1">
-                            {heroMatch.strengths.map(s => <li key={s}>{s}</li>)}
-                          </ul>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Weaknesses:</span>
-                          <ul className="list-disc list-inside mt-1">
-                            {heroMatch.weaknesses.map(w => <li key={w}>{w}</li>)}
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 pt-2 border-t">
-                        <span className="text-sm font-medium">Abilities</span>
-                        {heroMatch.gdaAbilities.map(ability => (
-                          <div key={ability.id} className="flex items-start gap-2 p-2 rounded bg-muted/50">
-                            <Zap className={`h-4 w-4 shrink-0 mt-0.5 ${ability.type === "passive" ? "text-blue-400" : "text-amber-400"}`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">{ability.name}</span>
-                                <Badge variant={ability.type === "passive" ? "secondary" : "default"} className="text-[9px] px-1 py-0">
-                                  {ability.type}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{ability.description}</p>
-                              {(ability.damage || ability.manaCost || ability.cooldown) && (
-                                <div className="flex gap-3 text-[10px] text-muted-foreground mt-1">
-                                  {ability.damage && <span>⚔️ {ability.damage} dmg</span>}
-                                  {ability.manaCost && <span>💧 {ability.manaCost} mana</span>}
-                                  {ability.cooldown && <span>⏱️ {ability.cooldown}s cd</span>}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* WCS Attributes for the hero */}
-                {heroMatch && (
-                  <Card>
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-base">Base Attributes (Level {heroMatch.level})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-2 px-4">
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        {Object.entries(heroMatch.wcsAttributes).map(([stat, val]) => (
-                          <div key={stat} className="flex flex-col items-center p-2 rounded bg-muted/50">
-                            <span className="font-mono text-lg font-bold">{val}</span>
-                            <span className="text-muted-foreground capitalize">{stat}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+      <ScrollArea className="h-[calc(100vh-200px)]">
+        <div className="space-y-4">
+          {/* Class Overview */}
+          <div className="ornate-frame p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-3xl">{meta?.icon}</span>
+              <div>
+                <h3 className="font-[var(--font-heading)] text-base gold-text tracking-wide">
+                  {tree?.className || activeClass}
+                </h3>
+                <span className="text-[10px] px-1.5 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)]">
+                  {meta?.playstyle}
+                </span>
               </div>
-            </ScrollArea>
-          </TabsContent>
-        ))}
-      </Tabs>
+              {tree && (
+                <div className="ml-auto w-4 h-4 rounded-full animate-gem-glow" style={{ backgroundColor: tree.color, color: tree.color }} />
+              )}
+            </div>
+            <p className="text-xs text-[hsl(45_30%_75%)] mb-3">{meta?.desc}</p>
+
+            {/* Weapons & Armor */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[10px] font-[var(--font-heading)] text-[hsl(43_70%_55%)] tracking-wide">Allowed Weapons</span>
+                <div className="flex gap-1 flex-wrap mt-1">
+                  {weapons.map(w => (
+                    <span key={w} className="text-[9px] px-1.5 py-0.5 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)] capitalize">
+                      {w.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] font-[var(--font-heading)] text-[hsl(43_70%_55%)] tracking-wide">Allowed Armor</span>
+                <div className="flex gap-1 flex-wrap mt-1">
+                  {armors.map(a => (
+                    <span key={a} className="text-[9px] px-1.5 py-0.5 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)] capitalize">
+                      {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skill Tree Preview */}
+          {tree && (
+            <div className="fantasy-panel p-4">
+              <h4 className="font-[var(--font-heading)] text-xs gold-text tracking-widest uppercase mb-3">
+                Skill Tree — {tree.tiers.length} Tiers
+              </h4>
+
+              {/* Special Ability */}
+              <div className="parchment-panel p-3 mb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-[var(--font-heading)] tracking-wide" style={{ color: tree.color }}>
+                    ★ {tree.specialAbility.name}
+                  </span>
+                  <span className="text-[9px] px-1 py-0 rounded border border-[hsl(35_100%_55%)] text-[hsl(35_100%_55%)]">
+                    {tree.specialAbility.effectType}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[hsl(45_15%_55%)]">{tree.specialAbility.description}</p>
+                <div className="flex gap-1 flex-wrap mt-1">
+                  {tree.specialAbility.effects.map((e, i) => (
+                    <span key={i} className="text-[9px] px-1 py-0 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_65%)]">{e}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tier list */}
+              <div className="space-y-2">
+                {tree.tiers.map(tier => (
+                  <div key={tier.level} className="stone-panel p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tree.color }} />
+                      <span className="font-[var(--font-heading)] text-[10px] tracking-wide" style={{ color: tree.color }}>
+                        Lv {tier.level} — {tier.tierName}
+                      </span>
+                      <span className="text-[9px] text-[hsl(45_15%_45%)] ml-auto">{tier.description}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {tier.choices.map(choice => (
+                        <div key={choice.id} className="flex items-center gap-1.5">
+                          {choice.icon && <img src={choice.icon} alt="" className="w-4 h-4 rounded" />}
+                          <span className="text-[10px] text-[hsl(45_30%_75%)]">{choice.name}</span>
+                          <span className="text-[9px] px-1 py-0 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_55%)]">
+                            {choice.effectType}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Attribute Affinities */}
+          <div className="fantasy-panel p-4">
+            <h4 className="font-[var(--font-heading)] text-xs gold-text tracking-widest uppercase mb-3">
+              Core Attributes (8)
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {ATTRIBUTE_IDS.map(attrId => {
+                const attr = ATTRIBUTES[attrId];
+                return (
+                  <div key={attrId} className="inset-panel p-2.5 text-center">
+                    <div className="font-[var(--font-heading)] text-xs font-bold" style={{ color: attr.color }}>
+                      {attr.abbrev}
+                    </div>
+                    <div className="text-[10px] text-[hsl(45_30%_75%)]">{attr.name}</div>
+                    <div className="text-[9px] text-[hsl(45_15%_50%)]">{attr.role}</div>
+                    <div className="text-[9px] text-[hsl(45_15%_45%)] mt-1">{attr.effects.length} stat effects</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

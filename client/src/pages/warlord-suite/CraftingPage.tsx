@@ -1,176 +1,271 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Hammer, Clock, FlaskConical, Package } from "lucide-react";
+import { Hammer, Clock, FlaskConical, CheckCircle } from "lucide-react";
 import {
-  RECIPES, MATERIALS, PROFESSIONS, TIER_NAMES,
-  type CraftingRecipe, type EquipmentTier,
-} from "@/lib/mmo-systems";
+  ALL_PROFESSIONS, GATHERING_PROFESSIONS, CRAFTING_PROFESSIONS,
+  getProfessionXPForLevel, getRequiredLevelForTier,
+  type Profession,
+} from "../../../../shared/wcs/gameDefinitions/professions";
 import { useGrudgePlayer } from "@/hooks/useGrudgePlayer";
+import {
+  useCraftingRecipes, useCraftingQueue,
+  useStartCraft, useCompleteCraft,
+  type BackendCraftingRecipe, type CraftingQueueItem,
+} from "@/hooks/useGrudgeAPI";
 
-function materialName(id: string): string {
-  return MATERIALS.find(m => m.id === id)?.name ?? id;
-}
+const PROF_ICONS: Record<string, string> = {
+  mining: "⛏️", logging: "🪵", herbalism: "🌿", fishing: "🎣", skinning: "✂️",
+  blacksmithing: "🔨", woodworking: "🏹", enchanting: "✨", alchemy: "⚗️", engineering: "⚙️",
+};
 
-function materialIcon(id: string): string {
-  return MATERIALS.find(m => m.id === id)?.icon ?? "📦";
-}
+const TAB_IDS = ["recipes", "queue", "professions"] as const;
 
 export default function CraftingPage() {
   const player = useGrudgePlayer();
   const { toast } = useToast();
-  const [crafting, setCrafting] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
+  const charId = player.activeChar?.id;
+  const classId = player.activeChar?.class;
+  const [activeTab, setActiveTab] = useState<string>("recipes");
 
-  const startCraft = (recipe: CraftingRecipe) => {
-    setCrafting(recipe.id);
-    setProgress(0);
-    const steps = 20;
-    let step = 0;
-    const interval = setInterval(() => {
-      step++;
-      setProgress(Math.round((step / steps) * 100));
-      if (step >= steps) {
-        clearInterval(interval);
-        setCrafting(null);
-        setProgress(0);
-        toast({ title: `Crafted ${recipe.name}!`, description: `${recipe.output.type} → ${recipe.output.itemId}` });
-      }
-    }, recipe.craftTimeMs / steps);
+  const { data: recipes = [], isLoading: recipesLoading } = useCraftingRecipes(classId);
+  const { data: queue = [], isLoading: queueLoading } = useCraftingQueue(charId);
+  const startCraft = useStartCraft();
+  const completeCraft = useCompleteCraft();
+
+  const handleStartCraft = (recipeKey: string) => {
+    if (!charId) return;
+    startCraft.mutate({ charId, recipeKey }, {
+      onSuccess: () => toast({ title: "Craft started!", description: `Recipe: ${recipeKey}` }),
+      onError: () => toast({ title: "Craft failed", description: "Check requirements", variant: "destructive" }),
+    });
   };
+
+  const handleCompleteCraft = (craftId: number) => {
+    completeCraft.mutate(craftId, {
+      onSuccess: () => toast({ title: "Craft complete!", description: "Item added to inventory" }),
+    });
+  };
+
+  const queuedCount = queue.filter(q => q.status === "queued").length;
 
   return (
     <div className="p-4 space-y-4">
-      <Tabs defaultValue="recipes">
-        <TabsList>
-          <TabsTrigger value="recipes" className="gap-1"><Hammer className="h-3 w-3" /> Recipes ({RECIPES.length})</TabsTrigger>
-          <TabsTrigger value="materials" className="gap-1"><Package className="h-3 w-3" /> Materials ({MATERIALS.length})</TabsTrigger>
-          <TabsTrigger value="professions" className="gap-1"><FlaskConical className="h-3 w-3" /> Professions ({PROFESSIONS.length})</TabsTrigger>
-        </TabsList>
+      {/* Tab buttons */}
+      <div className="flex gap-2">
+        {TAB_IDS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-[var(--font-heading)] tracking-wide rounded transition-all ${
+              activeTab === tab ? "gilded-button" : "dark-button"
+            }`}
+          >
+            {tab === "recipes" && <Hammer className="h-3 w-3" />}
+            {tab === "queue" && <Clock className="h-3 w-3" />}
+            {tab === "professions" && <FlaskConical className="h-3 w-3" />}
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === "queue" && queuedCount > 0 && (
+              <span className="ml-1 text-[9px] px-1 py-0 rounded-full bg-[hsl(43_40%_12%)] text-[hsl(43_85%_55%)] border border-[hsl(43_50%_30%)]">
+                {queuedCount}
+              </span>
+            )}
+            {tab === "professions" && (
+              <span className="ml-1 text-[10px] opacity-75">({ALL_PROFESSIONS.length})</span>
+            )}
+          </button>
+        ))}
+      </div>
 
-        <TabsContent value="recipes">
-          <ScrollArea className="h-[calc(100vh-220px)]">
+      {/* Recipes Tab */}
+      {activeTab === "recipes" && (
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          {!player.activeChar ? (
+            <div className="text-center text-[hsl(45_15%_55%)] py-8 font-[var(--font-body)]">Select a character to view recipes</div>
+          ) : recipesLoading ? (
+            <div className="text-center text-[hsl(45_15%_55%)] py-8 font-[var(--font-body)]">Loading recipes...</div>
+          ) : recipes.length === 0 ? (
+            <div className="text-center text-[hsl(45_15%_55%)] py-8 font-[var(--font-body)]">
+              No recipes available. Backend may be offline — check Professions tab for canonical data.
+            </div>
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {RECIPES.map(recipe => (
-                <Card key={recipe.id}>
-                  <CardHeader className="py-2 px-3">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span>{recipe.name}</span>
-                      <Badge variant="secondary" className="text-[9px]">{recipe.output.type}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2 px-3 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-muted-foreground">
+              {recipes.map((recipe: BackendCraftingRecipe) => (
+                <div key={recipe.recipe_key} className="parchment-panel p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-[var(--font-heading)] text-xs tracking-wide text-[hsl(45_30%_85%)]">{recipe.name}</span>
+                    <div className="flex gap-1">
+                      <span className="text-[9px] px-1 py-0.5 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)]">{recipe.output_item_type}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)]">T{recipe.output_tier}</span>
+                    </div>
+                  </div>
+                  {recipe.required_profession && (
+                    <div className="flex items-center gap-2 text-[10px] text-[hsl(45_15%_55%)]">
                       <FlaskConical className="h-3 w-3" />
-                      <span className="capitalize">{recipe.professionId}</span>
-                      <span>· Lv {recipe.requiredLevel}</span>
+                      <span className="capitalize">{recipe.required_profession}</span>
+                      <span>· Lv {recipe.required_level}</span>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground">Materials:</span>
-                      {recipe.materials.map(mat => (
-                        <div key={mat.materialId} className="flex items-center justify-between pl-2">
-                          <span>{materialIcon(mat.materialId)} {materialName(mat.materialId)}</span>
-                          <span className="font-mono">×{mat.quantity}</span>
-                        </div>
-                      ))}
+                  )}
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 text-[hsl(45_15%_55%)]">
+                      <Clock className="h-3 w-3" /> {recipe.craft_time_seconds}s
+                    </span>
+                    <span className="font-mono text-[hsl(43_85%_55%)]">{recipe.cost_gold}g</span>
+                  </div>
+                  <button
+                    className="gilded-button w-full py-1.5 text-xs flex items-center justify-center gap-1"
+                    onClick={() => handleStartCraft(recipe.recipe_key)}
+                    disabled={startCraft.isPending}
+                  >
+                    <Hammer className="h-3 w-3" /> Craft
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      )}
+
+      {/* Queue Tab */}
+      {activeTab === "queue" && (
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          {queue.length === 0 ? (
+            <div className="text-center text-[hsl(45_15%_55%)] py-8 font-[var(--font-body)]">No active crafts</div>
+          ) : (
+            <div className="space-y-3">
+              {queue.map((item: CraftingQueueItem) => (
+                <div key={item.id} className="fantasy-panel p-3 flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="font-[var(--font-heading)] text-sm text-[hsl(45_30%_85%)]">{item.recipe_name}</div>
+                    <div className="text-[10px] text-[hsl(45_15%_55%)]">
+                      {item.output_item_type} · T{item.output_tier}
                     </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{(recipe.craftTimeMs / 1000).toFixed(0)}s</span>
-                    </div>
-                    <div className="text-[10px] font-mono text-muted-foreground">→ {recipe.output.itemId}</div>
-                    {crafting === recipe.id ? (
-                      <Progress value={progress} className="h-2" />
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="w-full h-7 text-xs"
-                        onClick={() => startCraft(recipe)}
-                        disabled={!!crafting}
-                      >
-                        <Hammer className="h-3 w-3 mr-1" /> Craft
-                      </Button>
+                    {item.status === "queued" && !item.is_ready && (
+                      <div className="text-[10px] text-[hsl(45_15%_55%)] mt-1 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {Math.ceil(item.time_left_s)}s remaining
+                      </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                  {item.is_ready ? (
+                    <button
+                      className="gilded-button px-3 py-1.5 text-xs flex items-center gap-1"
+                      onClick={() => handleCompleteCraft(item.id)}
+                    >
+                      <CheckCircle className="h-3 w-3" /> Collect
+                    </button>
+                  ) : (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                      item.status === "complete"
+                        ? "border-[hsl(120_60%_40%)] text-[hsl(120_60%_50%)]"
+                        : "border-[hsl(220_15%_30%)] text-[hsl(45_15%_55%)]"
+                    }`}>
+                      {item.status}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
-          </ScrollArea>
-        </TabsContent>
+          )}
+        </ScrollArea>
+      )}
 
-        <TabsContent value="materials">
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {MATERIALS.map(mat => (
-                <Card key={mat.id}>
-                  <CardContent className="py-3 px-3 flex items-center gap-3">
-                    <span className="text-2xl">{mat.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{mat.name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">
-                        {mat.professionSource} · {TIER_NAMES[mat.tier as EquipmentTier]}
-                      </div>
-                    </div>
-                    <Badge variant="outline">T{mat.tier}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="professions">
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {PROFESSIONS.map(prof => {
-                const playerProf = player.professions.find(p => p.profession === prof.id);
-                const recipes = RECIPES.filter(r => r.professionId === prof.id);
-                const mats = MATERIALS.filter(m => m.professionSource === prof.id);
+      {/* Professions Tab */}
+      {activeTab === "professions" && (
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          <div className="space-y-4">
+            <h3 className="font-[var(--font-heading)] text-xs gold-text tracking-widest uppercase">
+              Gathering ({Object.keys(GATHERING_PROFESSIONS).length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Object.values(GATHERING_PROFESSIONS).map((prof: Profession) => {
+                const playerProf = player.professions.find(p => p.profession === prof.id || p.profession === prof.name);
                 return (
-                  <Card key={prof.id}>
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="text-xl">{prof.icon}</span>
-                        {prof.name}
-                        {playerProf && (
-                          <Badge variant="secondary">Lv {playerProf.level}</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-2 px-4 space-y-2 text-sm">
-                      <div className="text-xs text-muted-foreground">
-                        Biomes: {(prof.biomes as readonly string[]).join(", ")}
-                      </div>
-                      <div className="text-xs">
-                        <span className="text-muted-foreground">Recipes: </span>
-                        {recipes.map(r => r.name).join(", ") || "None"}
-                      </div>
-                      <div className="text-xs">
-                        <span className="text-muted-foreground">Materials: </span>
-                        {mats.map(m => `${m.icon} ${m.name}`).join(", ")}
-                      </div>
+                  <div key={prof.id} className="fantasy-panel p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">{PROF_ICONS[prof.id] || "📦"}</span>
+                      <span className="font-[var(--font-heading)] text-xs tracking-wide text-[hsl(45_30%_85%)]">{prof.name}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)]">{prof.type}</span>
                       {playerProf && (
-                        <div>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>XP</span>
-                            <span>{playerProf.xp} / {playerProf.next_milestone}</span>
-                          </div>
-                          <Progress value={(playerProf.xp / playerProf.next_milestone) * 100} className="h-2" />
-                        </div>
+                        <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[hsl(43_40%_12%)] text-[hsl(43_85%_55%)] border border-[hsl(43_50%_30%)]">
+                          Lv {playerProf.level}
+                        </span>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <p className="text-[10px] text-[hsl(45_15%_55%)] mb-1">{prof.description}</p>
+                    {prof.primaryStat && (
+                      <div className="text-[10px] text-[hsl(45_15%_60%)]">Primary: <span className="capitalize text-[hsl(43_70%_55%)]">{prof.primaryStat}</span></div>
+                    )}
+                    {prof.relatedProfessions && prof.relatedProfessions.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mt-1">
+                        <span className="text-[9px] text-[hsl(45_15%_50%)]">Synergies:</span>
+                        {prof.relatedProfessions.map(r => (
+                          <span key={r} className="text-[9px] px-1 py-0 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)]">{r}</span>
+                        ))}
+                      </div>
+                    )}
+                    {playerProf && (
+                      <Progress value={(playerProf.xp / (playerProf.next_milestone || 100)) * 100} className="h-1.5 mt-2" />
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+
+            <h3 className="font-[var(--font-heading)] text-xs gold-text tracking-widest uppercase pt-2">
+              Crafting ({Object.keys(CRAFTING_PROFESSIONS).length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Object.values(CRAFTING_PROFESSIONS).map((prof: Profession) => {
+                const playerProf = player.professions.find(p => p.profession === prof.id || p.profession === prof.name);
+                return (
+                  <div key={prof.id} className="fantasy-panel p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">{PROF_ICONS[prof.id] || "📦"}</span>
+                      <span className="font-[var(--font-heading)] text-xs tracking-wide text-[hsl(45_30%_85%)]">{prof.name}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)]">{prof.type}</span>
+                      {playerProf && (
+                        <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[hsl(43_40%_12%)] text-[hsl(43_85%_55%)] border border-[hsl(43_50%_30%)]">
+                          Lv {playerProf.level}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[hsl(45_15%_55%)] mb-1">{prof.description}</p>
+                    {prof.primaryStat && (
+                      <div className="text-[10px] text-[hsl(45_15%_60%)]">Primary: <span className="capitalize text-[hsl(43_70%_55%)]">{prof.primaryStat}</span></div>
+                    )}
+                    {prof.relatedProfessions && prof.relatedProfessions.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mt-1">
+                        <span className="text-[9px] text-[hsl(45_15%_50%)]">Synergies:</span>
+                        {prof.relatedProfessions.map(r => (
+                          <span key={r} className="text-[9px] px-1 py-0 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)]">{r}</span>
+                        ))}
+                      </div>
+                    )}
+                    {playerProf && (
+                      <Progress value={(playerProf.xp / (playerProf.next_milestone || 100)) * 100} className="h-1.5 mt-2" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tier Requirements */}
+            <div className="parchment-panel p-3">
+              <h4 className="font-[var(--font-heading)] text-xs gold-text tracking-wide mb-2">Tier → Required Profession Level</h4>
+              <div className="flex gap-2 flex-wrap">
+                {[0,1,2,3,4,5,6,7,8].map(t => (
+                  <span key={t} className="text-[10px] px-1.5 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)]">
+                    T{t} → Lv {getRequiredLevelForTier(t)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }

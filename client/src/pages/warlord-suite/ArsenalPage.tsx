@@ -1,142 +1,165 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Shield, Sword, Gem } from "lucide-react";
 import {
-  WEAPON_TYPES, EQUIPMENT_SLOTS, TIER_NAMES, TIER_COLORS,
-  CLASS_WEAPON_RESTRICTIONS, CLASS_ARMOR_RESTRICTIONS,
-  makeWeapon, makeArmor,
-  type EquipmentTier, type ArmorWeight, type WeaponDef, type ArmorDef,
-} from "@/lib/mmo-systems";
+  CLOTH_EQUIPMENT, LEATHER_EQUIPMENT, METAL_EQUIPMENT,
+  EQUIPMENT_SETS, EQUIPMENT_SLOTS, ARMOR_MATERIALS,
+  type EquipmentItem,
+} from "../../../../shared/wcs/definitions/equipmentData";
+import { useGrudgePlayer } from "@/hooks/useGrudgePlayer";
+import { useEquipItem } from "@/hooks/useGrudgeAPI";
 
-const ALL_TIERS: EquipmentTier[] = [0, 1, 2, 3, 4, 5];
-const ARMOR_WEIGHTS: ArmorWeight[] = ["cloth", "leather", "metal"];
-const ARMOR_SLOTS = ["Head", "Chest", "Legs", "Feet", "Shoulder", "Hands", "Back"] as const;
-const CLASSES = Object.keys(CLASS_WEAPON_RESTRICTIONS);
+const ALL_EQUIPMENT: EquipmentItem[] = [
+  ...CLOTH_EQUIPMENT,
+  ...LEATHER_EQUIPMENT,
+  ...METAL_EQUIPMENT,
+];
 
-function tierHex(tier: EquipmentTier): string {
-  return "#" + TIER_COLORS[tier].toString(16).padStart(6, "0");
-}
+const MATERIAL_COLORS: Record<string, string> = {
+  Cloth: "#8b5cf6",
+  Leather: "#d97706",
+  Metal: "#6b7280",
+};
+
+const MATERIAL_ICONS: Record<string, string> = {
+  Cloth: "🧵",
+  Leather: "🦌",
+  Metal: "⚙️",
+};
+
+const TAB_IDS = ["all", "cloth", "leather", "metal"] as const;
 
 export default function ArsenalPage() {
-  const [tierFilter, setTierFilter] = useState<string>("all");
-  const [classFilter, setClassFilter] = useState<string>("all");
+  const [materialFilter, setMaterialFilter] = useState<string>("all");
+  const [setFilter, setSetFilter] = useState<string>("all");
+  const [slotFilter, setSlotFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const player = useGrudgePlayer();
+  const equipMutation = useEquipItem();
 
-  const weapons = useMemo(() => {
-    const list: WeaponDef[] = [];
-    for (const type of WEAPON_TYPES) {
-      for (const tier of ALL_TIERS) {
-        list.push(makeWeapon(type, tier));
-      }
-    }
-    return list.filter(w => {
-      if (tierFilter !== "all" && w.tier !== Number(tierFilter)) return false;
-      if (classFilter !== "all" && !w.classes.includes(classFilter)) return false;
+  const filtered = useMemo(() => {
+    return ALL_EQUIPMENT.filter(item => {
+      if (materialFilter !== "all" && item.material !== materialFilter) return false;
+      if (slotFilter !== "all" && item.type !== slotFilter) return false;
+      if (setFilter !== "all" && !item.id.includes(setFilter.toLowerCase())) return false;
+      if (activeTab !== "all" && item.material.toLowerCase() !== activeTab) return false;
       return true;
     });
-  }, [tierFilter, classFilter]);
+  }, [materialFilter, setFilter, slotFilter, activeTab]);
 
-  const armors = useMemo(() => {
-    const list: ArmorDef[] = [];
-    for (const slot of ARMOR_SLOTS) {
-      for (const weight of ARMOR_WEIGHTS) {
-        for (const tier of ALL_TIERS) {
-          list.push(makeArmor(slot, weight, tier));
-        }
-      }
-    }
-    return list.filter(a => {
-      if (tierFilter !== "all" && a.tier !== Number(tierFilter)) return false;
-      if (classFilter !== "all" && !a.classes.includes(classFilter)) return false;
-      return true;
-    });
-  }, [tierFilter, classFilter]);
+  const equippedIds = new Set(
+    player.inventory.filter(i => i.equipped).map(i => i.item_key)
+  );
 
   return (
     <div className="p-4 space-y-4">
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Select value={tierFilter} onValueChange={setTierFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tier" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Tiers</SelectItem>
-            {ALL_TIERS.map(t => <SelectItem key={t} value={String(t)}>{TIER_NAMES[t]} (T{t})</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={classFilter} onValueChange={setClassFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Class" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Classes</SelectItem>
-            {CLASSES.map(c => <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <span className="text-xs text-muted-foreground">{weapons.length} weapons · {armors.length} armor pieces</span>
+      {/* Filters Bar */}
+      <div className="fantasy-panel p-3 flex items-center gap-3 flex-wrap">
+        <select
+          value={materialFilter}
+          onChange={e => setMaterialFilter(e.target.value)}
+          className="inset-panel px-2 py-1 text-xs text-[hsl(45_30%_75%)] bg-transparent outline-none"
+        >
+          <option value="all">All Materials</option>
+          {ARMOR_MATERIALS.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select
+          value={setFilter}
+          onChange={e => setSetFilter(e.target.value)}
+          className="inset-panel px-2 py-1 text-xs text-[hsl(45_30%_75%)] bg-transparent outline-none"
+        >
+          <option value="all">All Sets</option>
+          {EQUIPMENT_SETS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select
+          value={slotFilter}
+          onChange={e => setSlotFilter(e.target.value)}
+          className="inset-panel px-2 py-1 text-xs text-[hsl(45_30%_75%)] bg-transparent outline-none"
+        >
+          <option value="all">All Slots</option>
+          {EQUIPMENT_SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span className="text-[10px] text-[hsl(43_70%_55%)] ml-auto font-[var(--font-body)]">
+          {filtered.length} items ({ALL_EQUIPMENT.length} total)
+        </span>
       </div>
 
-      <Tabs defaultValue="weapons">
-        <TabsList>
-          <TabsTrigger value="weapons" className="gap-1"><Sword className="h-3 w-3" /> Weapons ({weapons.length})</TabsTrigger>
-          <TabsTrigger value="armor" className="gap-1"><Shield className="h-3 w-3" /> Armor ({armors.length})</TabsTrigger>
-        </TabsList>
+      {/* Material Tabs */}
+      <div className="flex gap-2">
+        {TAB_IDS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1.5 text-xs font-[var(--font-heading)] tracking-wide rounded transition-all ${
+              activeTab === tab ? "gilded-button" : "dark-button"
+            }`}
+          >
+            {tab === "all" ? "All" : `${MATERIAL_ICONS[tab.charAt(0).toUpperCase() + tab.slice(1)] || ""} ${tab.charAt(0).toUpperCase() + tab.slice(1)}`}
+            <span className="ml-1 text-[10px] opacity-75">
+              ({tab === "all" ? filtered.length : ALL_EQUIPMENT.filter(i => i.material.toLowerCase() === tab).length})
+            </span>
+          </button>
+        ))}
+      </div>
 
-        <TabsContent value="weapons">
-          <ScrollArea className="h-[calc(100vh-260px)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {weapons.map(w => (
-                <Card key={w.id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-3" style={{ borderLeft: `3px solid ${tierHex(w.tier)}` }}>
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span>{w.name}</span>
-                      <Badge variant="outline" style={{ color: tierHex(w.tier), borderColor: tierHex(w.tier) }}>
-                        T{w.tier}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2 px-3 space-y-1 text-xs">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Damage</span><span className="font-mono">{w.baseDamage}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Speed</span><span className="font-mono">{w.attackSpeed}/s</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Range</span><span className="font-mono">{w.range}px</span></div>
-                    <div className="flex gap-1 flex-wrap pt-1">
-                      {w.classes.map(c => <Badge key={c} variant="secondary" className="text-[9px] px-1 py-0">{c}</Badge>)}
+      {/* Equipment Grid */}
+      <ScrollArea className="h-[calc(100vh-280px)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {filtered.map(item => {
+            const isEquipped = equippedIds.has(item.id);
+            const matColor = MATERIAL_COLORS[item.material] || "#888";
+            return (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`stone-panel p-3 cursor-pointer transition-all hover:border-[hsl(43_60%_40%)] ${
+                      isEquipped ? "ring-1 ring-[hsl(43_85%_55%)]" : ""
+                    }`}
+                    style={{ borderLeftWidth: "3px", borderLeftColor: matColor }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-[var(--font-heading)] text-xs tracking-wide truncate text-[hsl(45_30%_85%)]">
+                        {item.name}
+                      </span>
+                      <div className="flex gap-1 shrink-0">
+                        <span className="text-[9px] px-1 py-0.5 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)]">{item.type}</span>
+                        <span className="text-[9px] px-1 py-0.5 rounded" style={{ borderWidth: "1px", borderColor: matColor + "60", color: matColor }}>
+                          {item.material}
+                        </span>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="armor">
-          <ScrollArea className="h-[calc(100vh-260px)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {armors.map(a => (
-                <Card key={a.id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-3" style={{ borderLeft: `3px solid ${tierHex(a.tier)}` }}>
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span>{a.name}</span>
-                      <Badge variant="outline" style={{ color: tierHex(a.tier), borderColor: tierHex(a.tier) }}>
-                        T{a.tier}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2 px-3 space-y-1 text-xs">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Defense</span><span className="font-mono">{a.defense}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Slot</span><span>{a.slot}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Weight</span><span className="capitalize">{a.weight}</span></div>
-                    <div className="flex gap-1 flex-wrap pt-1">
-                      {a.classes.map(c => <Badge key={c} variant="secondary" className="text-[9px] px-1 py-0">{c}</Badge>)}
+                    <div className="space-y-0.5 text-[10px]">
+                      <div className="flex justify-between"><span className="text-[hsl(45_15%_50%)]">HP</span><span className="font-mono text-[hsl(120_60%_50%)]">{item.stats.hpBase} +{item.stats.hpPerTier}/T</span></div>
+                      <div className="flex justify-between"><span className="text-[hsl(45_15%_50%)]">Mana</span><span className="font-mono text-blue-400">{item.stats.manaBase} +{item.stats.manaPerTier}/T</span></div>
+                      <div className="flex justify-between"><span className="text-[hsl(45_15%_50%)]">Crit</span><span className="font-mono text-[hsl(35_100%_55%)]">{item.stats.critBase}%</span></div>
+                      <div className="flex justify-between"><span className="text-[hsl(45_15%_50%)]">Def</span><span className="font-mono text-[hsl(220_80%_60%)]">{item.stats.defenseBase} +{item.stats.defensePerTier}/T</span></div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+                    <div className="text-[9px] mt-1.5 text-[hsl(43_70%_55%)]">
+                      {item.passive} · <span className="text-[hsl(45_15%_55%)]">{item.attribute}</span>
+                    </div>
+                    {isEquipped && (
+                      <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded bg-[hsl(43_40%_12%)] text-[hsl(43_85%_55%)] border border-[hsl(43_50%_30%)]">
+                        Equipped
+                      </span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs fantasy-panel p-3 space-y-1.5">
+                  <p className="font-[var(--font-heading)] font-semibold text-[hsl(43_85%_55%)]">{item.name}</p>
+                  <p className="text-xs italic text-[hsl(45_15%_55%)]">{item.lore}</p>
+                  <div className="text-xs space-y-0.5 text-[hsl(45_30%_75%)]">
+                    <div>Passive: <span className="text-[hsl(43_70%_55%)]">{item.passive}</span></div>
+                    <div>Effect: {item.effect}</div>
+                    <div>Proc: {item.proc}</div>
+                    <div>Set Bonus: <span className="text-[hsl(280_70%_60%)]">{item.setBonus}</span></div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

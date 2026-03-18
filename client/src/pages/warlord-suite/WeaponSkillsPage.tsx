@@ -1,87 +1,191 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sword, ChevronRight, Shield, Target } from "lucide-react";
-import { WEAPON_TYPES, CLASS_WEAPON_RESTRICTIONS, makeWeapon, TIER_NAMES, TIER_COLORS, type EquipmentTier } from "@/lib/mmo-systems";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronRight, Clock, Droplet } from "lucide-react";
+import {
+  WEAPON_SKILL_TREES,
+  getSkillsForSlot,
+  calculateSkillDamage,
+  calculateSkillCooldown,
+  getUpgradeEffect,
+  type WeaponSkill,
+} from "../../../../shared/wcs/definitions/weaponSkills";
+import {
+  CLASS_ALLOWED_WEAPONS,
+} from "../../../../shared/wcs/classWeaponRestrictions";
+import { CLASS_IDS } from "../../../../shared/wcs/gameConstants";
 
 const WEAPON_ICONS: Record<string, string> = {
-  sword: "⚔️", shield: "🛡️", "2h_sword": "🗡️", staff: "🪄", tome: "📖",
-  wand: "✨", mace: "🔨", dagger: "🗡️", bow: "🏹", crossbow: "🎯",
-  spear: "🔱", hammer: "⚒️",
+  SWORD: "⚔️", AXE: "🪓", BOW: "🏹", STAFF: "🪄", DAGGER: "🗡️",
+  MACE: "🔨", HAMMER: "⚒️", SPEAR: "🔱", WAND: "✨", SCYTHE: "💀",
 };
 
-const WEAPON_SKILLS: Record<string, { name: string; level: number; desc: string }[]> = {
-  sword:      [{ name: "Slash", level: 1, desc: "Basic sword swing" }, { name: "Parry", level: 5, desc: "Block incoming attack, riposte for 150% damage" }, { name: "Whirlwind", level: 15, desc: "Spin attack hitting all nearby enemies" }, { name: "Blade Dance", level: 30, desc: "Chain 5 rapid strikes with increasing damage" }],
-  "2h_sword": [{ name: "Cleave", level: 1, desc: "Wide arc attack" }, { name: "Overhead Slam", level: 5, desc: "Heavy downward strike, stuns for 1s" }, { name: "Executioner", level: 15, desc: "Massive damage to targets below 30% HP" }, { name: "Titan's Edge", level: 30, desc: "Empowered strikes ignore 50% of armor" }],
-  dagger:     [{ name: "Quick Stab", level: 1, desc: "Fast puncture attack" }, { name: "Backstab", level: 5, desc: "200% damage from behind" }, { name: "Fan of Knives", level: 15, desc: "Throw daggers in all directions" }, { name: "Shadow Strike", level: 30, desc: "Teleport behind target and deal 300% damage" }],
-  bow:        [{ name: "Aimed Shot", level: 1, desc: "Basic ranged attack" }, { name: "Multi-Shot", level: 5, desc: "Fire 3 arrows in a spread" }, { name: "Rain of Arrows", level: 15, desc: "Area denial, arrows rain for 4s" }, { name: "Eagle's Fury", level: 30, desc: "Rapid-fire 8 arrows at a single target" }],
-  crossbow:   [{ name: "Bolt Shot", level: 1, desc: "Heavy single bolt" }, { name: "Piercing Bolt", level: 5, desc: "Bolt penetrates through enemies" }, { name: "Explosive Bolt", level: 15, desc: "Bolt explodes on impact for AoE" }, { name: "Siege Shot", level: 30, desc: "Massive bolt deals 400% damage, long cooldown" }],
-  staff:      [{ name: "Arcane Bolt", level: 1, desc: "Basic magic projectile" }, { name: "Staff Strike", level: 5, desc: "Melee swing that knocks back" }, { name: "Conduit", level: 15, desc: "Channel mana, next spell deals 200% damage" }, { name: "Ley Line Burst", level: 30, desc: "Devastating AoE magic explosion" }],
-  wand:       [{ name: "Magic Missile", level: 1, desc: "Auto-targeting projectile" }, { name: "Drain Life", level: 5, desc: "Steal HP equal to damage dealt" }, { name: "Arcane Barrage", level: 15, desc: "Fire 5 homing missiles" }, { name: "Disintegrate", level: 30, desc: "Beam that deals continuous damage" }],
-  mace:       [{ name: "Crush", level: 1, desc: "Blunt force strike" }, { name: "Holy Strike", level: 5, desc: "Infuse mace with light, bonus holy damage" }, { name: "Shockwave", level: 15, desc: "Ground slam sends a wave forward" }, { name: "Judgment", level: 30, desc: "Divine strike that heals allies near the target" }],
-  tome:       [{ name: "Read Passage", level: 1, desc: "Buff ally with tome's enchantment" }, { name: "Ward", level: 5, desc: "Create a protective barrier on an ally" }, { name: "Mass Insight", level: 15, desc: "Buff entire party's spell damage by 20%" }, { name: "Grimoire Unleashed", level: 30, desc: "Unleash all stored spells at once" }],
-  spear:      [{ name: "Thrust", level: 1, desc: "Long-range forward stab" }, { name: "Sweep", level: 5, desc: "Low sweep that trips enemies" }, { name: "Impale", level: 15, desc: "Pin target in place for 3s" }, { name: "Dragon Lance", level: 30, desc: "Leaping strike from distance, massive damage" }],
-  hammer:     [{ name: "Smash", level: 1, desc: "Overhead hammer blow" }, { name: "Ground Pound", level: 5, desc: "AoE stun in small radius" }, { name: "Seismic Strike", level: 15, desc: "Earth splits beneath enemies in a line" }, { name: "Worldbreaker", level: 30, desc: "Catastrophic AoE, massive damage + stun" }],
-  shield:     [{ name: "Block", level: 1, desc: "Raise shield to negate damage" }, { name: "Shield Bash", level: 5, desc: "Stun target for 1.5s" }, { name: "Bulwark", level: 15, desc: "Become immovable, reflect projectiles" }, { name: "Fortress", level: 30, desc: "Shield all nearby allies for 50% of incoming damage" }],
+const SLOT_LABELS: Record<number, { name: string; color: string }> = {
+  1: { name: "Basic", color: "hsl(0 0% 70%)" },
+  2: { name: "Power", color: "hsl(220 80% 60%)" },
+  3: { name: "Utility", color: "hsl(280 70% 60%)" },
+  4: { name: "Ultimate", color: "hsl(35 100% 55%)" },
 };
-
-function tierHex(tier: EquipmentTier): string {
-  return "#" + TIER_COLORS[tier].toString(16).padStart(6, "0");
-}
 
 export default function WeaponSkillsPage() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedWeapon, setSelectedWeapon] = useState<string>("SWORD");
+  const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
+
+  const weaponTypes = Object.keys(WEAPON_SKILL_TREES);
+  const tree = WEAPON_SKILL_TREES[selectedWeapon];
+
+  // Which classes can use this weapon
+  const usableBy = useMemo(() => {
+    const lowerKey = selectedWeapon.toLowerCase();
+    return CLASS_IDS.filter(cls => {
+      const allowed = CLASS_ALLOWED_WEAPONS[cls];
+      return allowed?.some(w => w === lowerKey || w === `2h_${lowerKey}` || lowerKey === w.replace('2h_', ''));
+    });
+  }, [selectedWeapon]);
+
+  const skillsBySlot = useMemo(() => {
+    if (!tree) return {};
+    const grouped: Record<number, WeaponSkill[]> = { 1: [], 2: [], 3: [], 4: [] };
+    for (const skill of tree.skills) {
+      grouped[skill.slot]?.push(skill);
+    }
+    return grouped;
+  }, [tree]);
 
   return (
-    <div className="p-4">
-      <ScrollArea className="h-[calc(100vh-160px)]">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {WEAPON_TYPES.map(type => {
-            const classes = Object.entries(CLASS_WEAPON_RESTRICTIONS)
-              .filter(([, weapons]) => weapons.includes(type))
-              .map(([cls]) => cls);
-            const skills = WEAPON_SKILLS[type] || [];
-            const isExpanded = expanded === type;
-            const sample = makeWeapon(type, 3);
+    <div className="p-4 space-y-4">
+      {/* Weapon Type Selector */}
+      <div className="flex gap-2 flex-wrap">
+        {weaponTypes.map(wt => (
+          <button
+            key={wt}
+            onClick={() => { setSelectedWeapon(wt); setExpandedSkill(null); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-[var(--font-heading)] tracking-wide rounded transition-all ${
+              selectedWeapon === wt ? "gilded-button" : "dark-button"
+            }`}
+          >
+            <span className="text-base">{WEAPON_ICONS[wt] || "⚔️"}</span>
+            {wt}
+          </button>
+        ))}
+      </div>
 
+      {/* Weapon Info Header */}
+      {tree && (
+        <div className="ornate-frame p-3 flex items-center gap-3">
+          <span className="text-2xl">{WEAPON_ICONS[selectedWeapon] || "⚔️"}</span>
+          <div>
+            <h3 className="font-[var(--font-heading)] text-sm gold-text tracking-wide">{selectedWeapon} Skills</h3>
+            <div className="flex gap-1 mt-1">
+              <span className="text-[10px] text-[hsl(45_15%_55%)]">Used by:</span>
+              {usableBy.map(cls => (
+                <span key={cls} className="text-[9px] px-1.5 py-0.5 rounded border border-[hsl(43_50%_30%)] text-[hsl(43_70%_55%)] capitalize">
+                  {cls}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="ml-auto text-[10px] text-[hsl(45_15%_55%)]">
+            {tree.skills.length} skills · 4 slots
+          </div>
+        </div>
+      )}
+
+      {/* Skills by Slot */}
+      <ScrollArea className="h-[calc(100vh-260px)]">
+        <div className="space-y-4">
+          {([1, 2, 3, 4] as const).map(slot => {
+            const skills = skillsBySlot[slot] || [];
+            const slotMeta = SLOT_LABELS[slot];
+            if (skills.length === 0) return null;
             return (
-              <Card key={type} className="overflow-hidden cursor-pointer" onClick={() => setExpanded(isExpanded ? null : type)}>
-                <CardHeader className="py-2 px-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <span className="text-lg">{WEAPON_ICONS[type] || "⚔️"}</span>
-                    <span className="capitalize flex-1">{type.replace("_", " ")}</span>
-                    <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="py-2 px-3 space-y-2 text-xs">
-                  <div className="flex gap-1 flex-wrap">
-                    {classes.map(c => <Badge key={c} variant="secondary" className="text-[9px] px-1 py-0">{c}</Badge>)}
-                  </div>
-                  <div className="text-muted-foreground">
-                    Base: {sample.baseDamage} dmg · {sample.attackSpeed}/s · {sample.range}px range
-                  </div>
-                  {isExpanded && (
-                    <div className="space-y-1.5 pt-2 border-t">
-                      {skills.map((skill, i) => (
-                        <div key={skill.name} className="flex items-start gap-2">
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] shrink-0 mt-0.5"
-                            style={{ color: tierHex(Math.min(5, Math.floor(i * 1.5)) as EquipmentTier) }}
-                          >
-                            Lv {skill.level}
-                          </Badge>
-                          <div>
-                            <div className="font-medium">{skill.name}</div>
-                            <div className="text-muted-foreground">{skill.desc}</div>
-                          </div>
+              <div key={slot} className="fantasy-panel p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: slotMeta.color }} />
+                  <h4 className="font-[var(--font-heading)] text-xs tracking-widest uppercase" style={{ color: slotMeta.color }}>
+                    Slot {slot} — {slotMeta.name}
+                  </h4>
+                  <span className="text-[10px] text-[hsl(45_15%_50%)] ml-auto">
+                    {skills.length} skills · Max {slot === 4 ? 3 : 5} upgrades
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {skills.map(skill => {
+                    const isExpanded = expandedSkill === skill.id;
+                    return (
+                      <div
+                        key={skill.id}
+                        className="stone-panel p-3 cursor-pointer transition-all hover:border-[hsl(43_60%_40%)]"
+                        onClick={() => setExpandedSkill(isExpanded ? null : skill.id)}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {skill.icon && (
+                            <img src={skill.icon} alt="" className="w-6 h-6 rounded" />
+                          )}
+                          <span className="font-[var(--font-heading)] text-xs tracking-wide text-[hsl(45_30%_85%)] flex-1">
+                            {skill.name}
+                          </span>
+                          <ChevronRight className={`h-3.5 w-3.5 text-[hsl(45_15%_40%)] transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <p className="text-[10px] text-[hsl(45_15%_55%)] mb-1.5">{skill.description}</p>
+
+                        {/* Base stats row */}
+                        <div className="flex gap-3 text-[10px]">
+                          <span className="text-[hsl(0_65%_55%)]">⚔ {skill.baseDamage} dmg</span>
+                          <span className="flex items-center gap-0.5 text-[hsl(45_15%_55%)]">
+                            <Clock className="h-2.5 w-2.5" />{skill.cooldown}s
+                          </span>
+                          <span className="flex items-center gap-0.5 text-blue-400">
+                            <Droplet className="h-2.5 w-2.5" />{skill.manaCost}
+                          </span>
+                        </div>
+
+                        {/* Effects */}
+                        <div className="flex gap-1 flex-wrap mt-1.5">
+                          {skill.effects.map((e, i) => (
+                            <span key={i} className="text-[9px] px-1 py-0 rounded border border-[hsl(220_15%_30%)] text-[hsl(45_15%_60%)]">
+                              {e}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Expanded: Upgrade Path */}
+                        {isExpanded && (
+                          <div className="mt-3 pt-2 border-t border-[hsl(220_15%_25%)] space-y-1.5">
+                            <span className="text-[10px] font-[var(--font-heading)] text-[hsl(43_70%_55%)] tracking-wide">
+                              Upgrade Path
+                            </span>
+                            {skill.upgradeEffects.map((effect, lvl) => {
+                              const dmg = calculateSkillDamage(skill, lvl + 1);
+                              const cd = calculateSkillCooldown(skill, lvl + 1);
+                              return (
+                                <div key={lvl} className="flex items-start gap-2 text-[10px]">
+                                  <span className="shrink-0 w-5 h-5 rounded flex items-center justify-center text-[9px] font-mono"
+                                    style={{
+                                      backgroundColor: `${slotMeta.color}20`,
+                                      color: slotMeta.color,
+                                      border: `1px solid ${slotMeta.color}40`,
+                                    }}
+                                  >
+                                    {lvl + 1}
+                                  </span>
+                                  <div className="flex-1">
+                                    <span className="text-[hsl(45_30%_75%)]">{effect}</span>
+                                    <span className="text-[hsl(45_15%_45%)] ml-2">
+                                      ({dmg} dmg, {cd.toFixed(1)}s cd)
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
