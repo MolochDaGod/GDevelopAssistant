@@ -137,6 +137,21 @@ npm run build:vercel       # Build client
 vercel --prod --yes        # Deploy to production
 ```
 
+## Warlord Suite (Native Pages)
+
+The Warlord Suite tabs at `/warlord-suite/:page` are fully native React pages (no external iframes). Each sub-page uses live game data from `mmo-systems.ts` and `grudaWarsHeroes.ts`.
+
+| Slug | Page | Description |
+|------|------|-------------|
+| `skill-tree` | Skill Tree | 6 class skill trees with unlock/reset mechanics |
+| `arsenal` | Arsenal | Equipment browser with tier/class filters, weapon & armor stats |
+| `crafting` | Crafting | Recipe browser with materials, professions, and craft progress bar |
+| `weapon-skills` | Weapon Skills | 12 weapon type skill progressions with class restrictions |
+| `class-skill` | Class Skills | Class overview, abilities, attributes from Gruda Wars heroes |
+| `character-builder` | Character Builder | Race/class selector, 8-stat allocator, live derived combat stats |
+
+Source: `client/src/pages/warlord-suite/`
+
 ## Key Modules
 
 - `client/src/lib/mmo-systems.ts` — Combat formulas, equipment tiers, crafting recipes, gathering professions (all built on WCS stats)
