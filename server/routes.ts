@@ -6,6 +6,7 @@ import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
+import { r2Client } from "./objectStoreR2";
 import {
   ASSET_RULES,
   validateAssetUpload,
@@ -2489,10 +2490,12 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/viewport-assets/sync-from-storage", async (req, res) => {
     try {
-      const objectStorageService = new ObjectStorageService();
-      const storageFiles = await objectStorageService.listFiles('public/');
+      // Fetch all assets from ObjectStore R2 Worker
+      const r2Assets = await r2Client.listAssets({ limit: 200 });
       
-      const glbFiles = storageFiles.filter((f: { name: string; size?: number }) => f.name.toLowerCase().endsWith('.glb'));
+      const glbItems = r2Assets.items.filter(a =>
+        a.filename.toLowerCase().endsWith('.glb') || a.mime === 'model/gltf-binary'
+      );
       
       const results = {
         added: 0,
@@ -2500,44 +2503,40 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
         errors: [] as { file: string; error: string }[],
       };
       
-      for (const file of glbFiles) {
+      for (const asset of glbItems) {
         try {
-          const fileName = file.name.split('/').pop() || '';
-          const pathParts = file.name.split('/');
+          const fileName = asset.filename;
+          const key = asset.key;
           
-          let category = 'misc';
+          // Derive category from R2 metadata or key path
+          let category = asset.category || 'misc';
           let subcategory: string | undefined;
-          const tags: string[] = [];
+          const tags: string[] = [...(asset.tags || [])];
           
-          if (file.name.includes('/animations/')) {
+          if (key.includes('/animations/')) {
             category = 'animation';
-            tags.push('animation');
-          } else if (file.name.includes('/characters/') || file.name.includes('/Characters/')) {
+            if (!tags.includes('animation')) tags.push('animation');
+          } else if (key.includes('/characters/') || key.includes('/Characters/')) {
             category = 'unit';
             subcategory = 'character';
-            tags.push('character');
-          } else if (file.name.includes('/weapons/') || file.name.includes('/Weapons/')) {
+            if (!tags.includes('character')) tags.push('character');
+          } else if (key.includes('/weapons/') || key.includes('/Weapons/')) {
             category = 'weapon';
-            tags.push('weapon');
-          } else if (file.name.includes('/buildings/') || file.name.includes('/Buildings/')) {
+            if (!tags.includes('weapon')) tags.push('weapon');
+          } else if (key.includes('/buildings/') || key.includes('/Buildings/')) {
             category = 'building';
-            tags.push('building');
-          } else if (file.name.includes('/props/')) {
+            if (!tags.includes('building')) tags.push('building');
+          } else if (key.includes('/props/')) {
             category = 'prop';
-            if (file.name.includes('/nature/')) {
-              subcategory = 'nature';
-              tags.push('nature');
-            } else if (file.name.includes('/items/')) {
-              subcategory = 'item';
-              tags.push('item');
-            }
-          } else if (file.name.includes('/Vehicles/') || file.name.includes('/vehicles/')) {
+            if (key.includes('/nature/')) { subcategory = 'nature'; tags.push('nature'); }
+            else if (key.includes('/items/')) { subcategory = 'item'; tags.push('item'); }
+          } else if (key.includes('/vehicles/') || key.includes('/Vehicles/')) {
             category = 'vehicle';
-            tags.push('vehicle');
-          } else if (file.name.includes('/effects/')) {
+            if (!tags.includes('vehicle')) tags.push('vehicle');
+          } else if (key.includes('/effects/')) {
             category = 'effect';
             tags.push('effect', 'vfx');
-          } else if (file.name.includes('/Worlds/')) {
+          } else if (key.includes('/Worlds/')) {
             category = 'environment';
             tags.push('world', 'environment');
           }
@@ -2560,39 +2559,40 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
             continue;
           }
           
-          const storagePath = `/public-objects/${file.name}`;
+          // Use R2 file URL (CDN-cached, immutable)
+          const filePath = r2Client.getAssetFileUrl(asset.id);
           
           await storage.createViewportAsset({
             name: baseName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
             slug,
-            sourceType: 'object-storage',
+            sourceType: 'objectstore-r2',
             assetType: 'glb',
             category,
             subcategory,
-            filePath: storagePath,
+            filePath,
             tags,
-            isAnimated: category === 'animation' || file.name.includes('animation'),
-            fileSize: file.size || undefined,
-            metadata: { storageKey: file.name },
+            isAnimated: category === 'animation' || key.includes('animation'),
+            fileSize: asset.size || undefined,
+            metadata: { r2Id: asset.id, r2Key: asset.key, ...asset.metadata },
             viewportConfig: { cameraPosition: { x: 3, y: 2, z: 5 }, autoRotate: true },
           });
           
           results.added++;
         } catch (error) {
-          results.errors.push({ file: file.name, error: String(error) });
+          results.errors.push({ file: asset.filename, error: String(error) });
         }
       }
       
       res.json({
-        message: `Synced ${results.added} GLB files from Object Storage`,
+        message: `Synced ${results.added} GLB files from ObjectStore R2`,
         added: results.added,
         skipped: results.skipped,
-        total: glbFiles.length,
+        total: glbItems.length,
         errors: results.errors,
       });
     } catch (error) {
-      console.error("Error syncing from storage:", error);
-      res.status(500).json({ error: "Failed to sync from Object Storage" });
+      console.error("Error syncing from ObjectStore R2:", error);
+      res.status(500).json({ error: "Failed to sync from ObjectStore R2" });
     }
   });
 
@@ -2602,6 +2602,96 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete asset" });
+    }
+  });
+
+  // ============================================
+  // ObjectStore R2 Proxy Routes
+  // Server-side proxy keeps API key secure. Public reads can also go
+  // direct to the Worker, but writes MUST go through this proxy.
+  // Best-practice example for all Grudge Studio projects.
+  // ============================================
+
+  app.get("/api/objectstore/health", async (_req, res) => {
+    try {
+      const health = await r2Client.healthCheck();
+      res.json({ ...health, workerUrl: r2Client.getWorkerUrl(), hasApiKey: r2Client.hasApiKey() });
+    } catch (error: any) {
+      res.status(502).json({ status: "error", error: error.message });
+    }
+  });
+
+  app.get("/api/objectstore/assets", async (req, res) => {
+    try {
+      const { category, tag, q, prefix, limit, offset } = req.query;
+      const result = await r2Client.listAssets({
+        category: category as string | undefined,
+        tag: tag as string | undefined,
+        q: q as string | undefined,
+        prefix: prefix as string | undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+        offset: offset ? parseInt(offset as string, 10) : undefined,
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("ObjectStore list error:", error.message);
+      res.status(error.status || 502).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/objectstore/assets/:id", async (req, res) => {
+    try {
+      const asset = await r2Client.getAsset(req.params.id);
+      res.json(asset);
+    } catch (error: any) {
+      res.status(error.status || 502).json({ error: error.message });
+    }
+  });
+
+  // Upload proxy — streams the raw multipart body to the Worker with the API key.
+  // No multipart parsing needed on this server; the Worker handles it.
+  app.post("/api/objectstore/assets", async (req, res) => {
+    try {
+      if (!r2Client.hasApiKey()) {
+        return res.status(503).json({ error: "ObjectStore API key not configured" });
+      }
+
+      const contentType = req.headers["content-type"] || "";
+      const workerUrl = `${r2Client.getWorkerUrl()}/v1/assets`;
+
+      // Collect the raw body into a buffer
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      const body = Buffer.concat(chunks);
+
+      const workerRes = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": contentType,
+          "X-API-Key": process.env.OBJECTSTORE_API_KEY || "",
+        },
+        body,
+      });
+
+      const data = await workerRes.json();
+      res.status(workerRes.status).json(data);
+    } catch (error: any) {
+      console.error("ObjectStore upload proxy error:", error.message);
+      res.status(502).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/objectstore/assets/:id", async (req, res) => {
+    try {
+      if (!r2Client.hasApiKey()) {
+        return res.status(503).json({ error: "ObjectStore API key not configured" });
+      }
+      const result = await r2Client.deleteAsset(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(error.status || 502).json({ error: error.message });
     }
   });
 
