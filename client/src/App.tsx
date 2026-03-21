@@ -60,6 +60,7 @@ const GrudgeBoxPage = lazy(() => import("@/pages/grudge-box"));
 const CryptCrawlers = lazy(() => import("@/pages/crypt-crawlers"));
 const WarlordSuite = lazy(() => import("@/pages/warlord-suite"));
 const ConnectionsPage = lazy(() => import("@/pages/connections"));
+const NexusNemesis = lazy(() => import("@/pages/nexus-nemesis"));
 
 function PageLoader() {
   return (
@@ -117,6 +118,7 @@ function Router() {
         <Route path="/grudge-box" component={GrudgeBoxPage} />
         <Route path="/crypt-crawlers" component={CryptCrawlers} />
         <Route path="/warlord-suite/:page?" component={WarlordSuite} />
+        <Route path="/nexus-nemesis" component={NexusNemesis} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -167,10 +169,11 @@ function Header() {
     if (location === "/grudge-box") return "GrudgeBox";
     if (location === "/crypt-crawlers") return "Crypt Crawlers";
     if (location.startsWith("/warlord-suite")) return "Warlord Suite";
+    if (location === "/nexus-nemesis") return "Nexus Nemesis";
     return "Grudge Brawl";
   };
 
-  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite"].some(
+  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis"].some(
     path => location === path
   );
 

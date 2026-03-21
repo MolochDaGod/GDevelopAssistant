@@ -188,6 +188,12 @@ const featured3DGames = [
     badge: "RPG",
   },
   {
+    title: "Nexus Nemesis",
+    url: "/nexus-nemesis",
+    icon: Crown,
+    badge: "TCG",
+  },
+  {
     title: "Galactic Conquest",
     url: "/swarm-galactic",
     icon: Globe,

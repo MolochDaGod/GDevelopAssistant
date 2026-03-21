@@ -26,6 +26,7 @@ const GAMES: GameEntry[] = [
   { id: "grudge-swarm", title: "Grudge Swarm", description: "Galactic swarm battles in space", image: "/assets/games/grudge-brand.png", route: "/grudge-swarm", tags: ["RTS"], category: "games" },
   { id: "realm-protector", title: "Realm Protector", description: "Tower defense realm guardian", image: "/assets/games/scourge.png", route: "/realm", tags: ["TD"], category: "games" },
   { id: "pixel-warrior", title: "Pixel Warrior", description: "2D platformer action game", image: "/assets/games/gruda-wars.png", route: "/platformer", tags: ["2D"], category: "games" },
+  { id: "nexus-nemesis", title: "Nexus Nemesis", description: "Web3 trading card game with PvP battles, NFT minting, and Season 0 cards", image: "/assets/games/card-game.jpg", route: "/nexus-nemesis", tags: ["TCG", "Web3", "PvP"], category: "games" },
   // â”€â”€ Tools â”€â”€
   { id: "rts-builder", title: "RTS Builder", description: "Visual RTS game level designer", image: "/assets/games/world-map.gif", route: "/rts-builder", tags: ["Builder"], category: "tools" },
   { id: "map-editor", title: "Map Editor", description: "2D/3D tile-based map editor", image: "/assets/games/world-map.gif", route: "/map-editor", tags: ["2D/3D"], category: "tools" },
