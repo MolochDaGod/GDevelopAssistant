@@ -39,6 +39,7 @@ const FlightSimulator = lazy(() => import("@/pages/flight-simulator"));
 const RealmProtector = lazy(() => import("@/pages/realm-protector"));
 const GrudgeGangs = lazy(() => import("@/pages/grudge-gangs"));
 const GrudgeArena = lazy(() => import("@/pages/grudge-arena"));
+const GrudgeArenaV1 = lazy(() => import("@/pages/grudge-arena-v1"));
 const AssetGallery = lazy(() => import("@/pages/asset-gallery"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const GrudgeWarlords = lazy(() => import("@/pages/grudge-warlords"));
@@ -51,6 +52,7 @@ const SkillTreeEditor = lazy(() => import("@/pages/skill-tree-editor"));
 const SwarmRTS = lazy(() => import("@/pages/swarm-rts"));
 const SwarmGalactic = lazy(() => import("@/pages/swarm-galactic"));
 const MMOWorld = lazy(() => import("@/pages/mmo-world"));
+const MMOWorldV1 = lazy(() => import("@/pages/mmo-world-v1"));
 const FeaturedGames = lazy(() => import("@/pages/featured-games"));
 const GrudgeSwarm = lazy(() => import("@/pages/grudge-swarm"));
 const GrudaWars = lazy(() => import("@/pages/gruda-wars"));
@@ -98,6 +100,7 @@ function Router() {
         <Route path="/realm" component={RealmProtector} />
         <Route path="/moba" component={GrudgeGangs} />
         <Route path="/arena" component={GrudgeArena} />
+        <Route path="/arena/v1" component={GrudgeArenaV1} />
         <Route path="/asset-gallery" component={AssetGallery} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/warlords" component={GrudgeWarlords} />
@@ -110,6 +113,7 @@ function Router() {
         <Route path="/swarm-rts" component={SwarmRTS} />
         <Route path="/swarm-galactic" component={SwarmGalactic} />
         <Route path="/mmo" component={MMOWorld} />
+        <Route path="/mmo/v1" component={MMOWorldV1} />
         <Route path="/games" component={FeaturedGames} />
         <Route path="/grudge-swarm" component={GrudgeSwarm} />
         <Route path="/gruda-wars" component={GrudaWars} />

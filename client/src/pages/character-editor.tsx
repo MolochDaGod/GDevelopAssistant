@@ -71,6 +71,17 @@ import {
   type OsAnimationsData, type SpriteCharacter, type SpriteAnimation,
 } from "@/lib/objectstore-gamedata";
 
+// ── Grudge Engine: Race characters and weapon classes ─────────────────────
+import {
+  RACES,
+  RACE_IDS,
+  WEAPON_DEFINITIONS,
+  WEAPON_TYPES,
+  getWeapon,
+  type RaceId,
+  type WeaponType,
+} from "@/lib/grudge-engine";
+
 interface BodyPart {
   id: string;
   name: string;
@@ -242,6 +253,10 @@ export default function CharacterEditor() {
   const [webglError, setWebglError] = useState(false);
   const [storageBrowserOpen, setStorageBrowserOpen] = useState(false);
   const [selectedGrudgeCharId, setSelectedGrudgeCharId] = useState<number | null>(null);
+  
+  // Grudge Engine race/weapon selection
+  const [selectedRace, setSelectedRace] = useState<RaceId>('human');
+  const [selectedWeaponClass, setSelectedWeaponClass] = useState<WeaponType>('greatsword');
 
   // Grudge backend characters & factions for the editor
   const { data: grudgeChars = [], refetch: refetchGrudgeChars } = useQuery<GrudgeCharacter[]>({
@@ -660,6 +675,13 @@ export default function CharacterEditor() {
       description: `Knight mannequin ready — ${parts.length} body parts. Upload a GLB to replace.`,
     });
   }, [extractBodyParts, toast]);
+
+  /** Load a race character GLB from the Grudge Engine. */
+  const loadRaceCharacter = useCallback((raceId: RaceId) => {
+    setSelectedRace(raceId);
+    const raceDef = RACES[raceId];
+    loadModel(raceDef.modelUrl, `${raceDef.name} (${raceId})`);
+  }, [loadModel]);
 
   useEffect(() => {
     if (sceneRef.current && !modelLoaded && !loading) {
@@ -1101,6 +1123,56 @@ export default function CharacterEditor() {
               <Cloud className="h-4 w-4 mr-2 text-red-600" />
               <span className="text-sm">Upload from Grudge</span>
             </Button>
+          </div>
+
+          {/* ── Grudge Engine Race Characters ── */}
+          <Separator className="bg-gray-800" />
+          <div className="space-y-2 mt-2">
+            <Label className="text-xs text-gray-400 uppercase tracking-wider">Race Character</Label>
+            <div className="grid grid-cols-3 gap-1">
+              {RACE_IDS.map((raceId) => {
+                const race = RACES[raceId];
+                return (
+                  <button
+                    key={raceId}
+                    onClick={() => loadRaceCharacter(raceId)}
+                    className={`p-2 rounded-md text-xs text-center transition-all border ${
+                      selectedRace === raceId
+                        ? 'border-red-500 bg-red-500/20 text-white'
+                        : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500 hover:text-white'
+                    }`}
+                    data-testid={`race-btn-${raceId}`}
+                  >
+                    <div className="w-3 h-3 rounded-full mx-auto mb-1" style={{ background: race.uiColor }} />
+                    <span className="capitalize">{raceId}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Weapon Class Selector ── */}
+          <div className="space-y-2 mt-2">
+            <Label className="text-xs text-gray-400 uppercase tracking-wider">Weapon Class</Label>
+            <Select value={selectedWeaponClass} onValueChange={(v) => setSelectedWeaponClass(v as WeaponType)}>
+              <SelectTrigger className="bg-gray-900 border-gray-700 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WEAPON_TYPES.map((wt) => {
+                  const w = getWeapon(wt);
+                  return (
+                    <SelectItem key={wt} value={wt}>
+                      <span className="font-bold">{w.name}</span>
+                      <span className="text-gray-400 ml-1">— {w.title}</span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-gray-500">
+              {getWeapon(selectedWeaponClass).description} • DMG {getWeapon(selectedWeaponClass).baseAttackDamage}
+            </p>
           </div>
         </div>
 
