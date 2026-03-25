@@ -131,7 +131,13 @@ const featured3DGames = [
     title: "Overdrive",
     url: "/grudge-drive",
     icon: Car,
-    badge: "Racing",
+    badge: "2D",
+  },
+  {
+    title: "Grudge Drift",
+    url: "/drift",
+    icon: Car,
+    badge: "3D",
   },
   {
     title: "Crown Clash",
@@ -281,11 +287,13 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-2">
         <Link href="/" className="block hover-elevate rounded-md overflow-hidden">
-          <div className="relative w-full rounded-md overflow-hidden bg-gradient-to-r from-yellow-900/80 via-amber-800/60 to-yellow-900/80 border border-yellow-700/30 p-4">
-            <div className="text-xl font-bold text-center" style={{ fontFamily: 'Cinzel, serif' }} data-testid="img-logo">
-              <span className="text-yellow-400">GRUDGE</span>
-              <span className="text-yellow-200/70 text-sm ml-1">Warlords</span>
-            </div>
+          <div className="relative w-full rounded-md overflow-hidden bg-black border border-orange-600/30 p-3 flex items-center justify-center">
+            <img
+              src="/assets/branding/grudge-logo.svg"
+              alt="GRUDGE"
+              className="h-10 w-auto"
+              data-testid="img-logo"
+            />
           </div>
         </Link>
       </SidebarHeader>

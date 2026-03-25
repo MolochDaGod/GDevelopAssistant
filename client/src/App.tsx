@@ -46,6 +46,7 @@ const GrudgeWarlords = lazy(() => import("@/pages/grudge-warlords"));
 const MapEditor = lazy(() => import("@/pages/map-editor"));
 const CharacterEditor = lazy(() => import("@/pages/character-editor"));
 const GrudgeDrive = lazy(() => import("@/pages/grudge-drive"));
+const GrudgeDrift = lazy(() => import("@/pages/grudge-drift"));
 const Decay = lazy(() => import("@/pages/decay"));
 const AdminStorage = lazy(() => import("@/pages/admin-storage"));
 const SkillTreeEditor = lazy(() => import("@/pages/skill-tree-editor"));
@@ -107,6 +108,7 @@ function Router() {
         <Route path="/map-editor" component={MapEditor} />
         <Route path="/character-editor" component={CharacterEditor} />
         <Route path="/grudge-drive" component={GrudgeDrive} />
+        <Route path="/drift" component={GrudgeDrift} />
         <Route path="/decay" component={Decay} />
         <Route path="/admin-storage" component={AdminStorage} />
         <Route path="/skill-tree" component={SkillTreeEditor} />
@@ -158,6 +160,7 @@ function Header() {
     if (location === "/map-editor") return "Map Editor";
     if (location === "/character-editor") return "Character Editor";
     if (location === "/grudge-drive") return "Overdrive";
+    if (location === "/drift") return "Grudge Drift";
     if (location === "/decay") return "Decay";
     if (location === "/admin-storage") return "Storage Admin";
     if (location === "/skill-tree") return "Skill Tree Editor";
@@ -177,7 +180,7 @@ function Header() {
     return "Grudge Brawl";
   };
 
-  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis"].some(
+  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/drift", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis"].some(
     path => location === path
   );
 
