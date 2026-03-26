@@ -370,19 +370,41 @@ export class CombatSystem {
     return (fromAbove && toBelow) || (fromBelow && toAbove);
   }
 
+  private pendingRemoval = new Set<string>();
+
   private cleanDead(): void {
-    const toRemove = this.units.filter(u => u.isDead);
-    for (const unit of toRemove) {
-      // Fade out over a short delay then remove
+    for (const unit of this.units) {
+      if (!unit.isDead || this.pendingRemoval.has(unit.id)) continue;
+
+      // Mark so we don't schedule removal twice
+      this.pendingRemoval.add(unit.id);
+
+      // Immediate: shrink + sink the mesh as death visual
+      const mesh = unit.mesh;
+      const startScale = mesh.scale.x;
+      let elapsed = 0;
+      const shrink = () => {
+        elapsed += 16;
+        const t = Math.min(elapsed / 600, 1); // 600ms fade
+        mesh.scale.setScalar(startScale * (1 - t * 0.7));
+        mesh.position.y = -t * 0.5;
+        mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.material) {
+            (child.material as THREE.MeshStandardMaterial).opacity = 1 - t;
+            (child.material as THREE.MeshStandardMaterial).transparent = true;
+          }
+        });
+        if (t < 1) requestAnimationFrame(shrink);
+      };
+      requestAnimationFrame(shrink);
+
+      // After fade, fully remove
       setTimeout(() => {
         this.unitFactory.removeUnit(unit);
-        this.units = this.units.filter(u => u !== unit);
-      }, 800);
+        this.units = this.units.filter(u => u.id !== unit.id);
+        this.pendingRemoval.delete(unit.id);
+      }, 700);
     }
-    // Mark as removed from targeting
-    this.units.forEach(u => {
-      if (u.isDead) u.isDead = true;
-    });
   }
 
   dispose(): void {

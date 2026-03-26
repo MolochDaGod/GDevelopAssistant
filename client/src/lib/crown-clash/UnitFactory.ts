@@ -176,17 +176,18 @@ export class UnitFactory {
     const key = `${faction}/${modelName}`;
     const template = this.modelCache.get(key);
 
-    if (!template) {
-      console.warn(`[UnitFactory] No model cached for ${key}`);
-      return null;
-    }
-
-    // Clone the model using SkeletonUtils for proper skeleton handling
     let mesh: THREE.Group;
-    try {
-      mesh = SkeletonUtils.clone(template) as THREE.Group;
-    } catch {
-      mesh = template.clone();
+    if (!template) {
+      // Fallback: create a colored capsule placeholder
+      console.warn(`[UnitFactory] No model for ${key}, using placeholder`);
+      mesh = this.createPlaceholderUnit(faction, role, owner);
+    } else {
+      // Clone the model using SkeletonUtils for proper skeleton handling
+      try {
+        mesh = SkeletonUtils.clone(template) as THREE.Group;
+      } catch {
+        mesh = template.clone();
+      }
     }
 
     mesh.position.copy(position);
@@ -197,16 +198,27 @@ export class UnitFactory {
       mesh.rotation.y = Math.PI;
     }
 
-    // Setup animation mixer
+    // Setup animation mixer — try GLB clips on FBX skeleton
     let mixer: THREE.AnimationMixer | null = null;
+    let animWorking = false;
     const idleClip = this.animationClips.get('idle');
     if (idleClip) {
       mixer = new THREE.AnimationMixer(mesh);
       try {
         const action = mixer.clipAction(idleClip);
         action.play();
+        // Check if any tracks actually bind (animation retargeting test)
+        const bound = action.getClip().tracks.some(t => {
+          const parts = t.name.split('.');
+          return mesh.getObjectByName(parts[0]) !== undefined;
+        });
+        animWorking = bound;
+        if (!bound) {
+          mixer.stopAllAction();
+          mixer = null;
+        }
       } catch {
-        // Animation retargeting may fail on different skeletons - that's OK
+        mixer = null;
       }
     }
 
@@ -281,32 +293,33 @@ export class UnitFactory {
   }
 
   playAnimation(unit: GameUnit, animName: string): void {
-    if (!unit.mixer || unit.currentAnim === animName) return;
-    
-    const clip = this.animationClips.get(animName);
-    if (!clip) return;
+    if (unit.currentAnim === animName) return;
+    unit.currentAnim = animName;
 
-    try {
-      unit.mixer.stopAllAction();
-      const action = unit.mixer.clipAction(clip);
-      
-      if (animName === 'attack' || animName === 'hit' || animName === 'dodge') {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-        action.reset().play();
-        
-        // Return to idle after one-shot
-        unit.mixer.addEventListener('finished', () => {
-          if (!unit.isDead) this.playAnimation(unit, 'idle');
-        });
-      } else {
-        action.play();
+    // Try skeleton animation if mixer exists
+    if (unit.mixer) {
+      const clip = this.animationClips.get(animName);
+      if (clip) {
+        try {
+          unit.mixer.stopAllAction();
+          const action = unit.mixer.clipAction(clip);
+          if (animName === 'attack' || animName === 'hit' || animName === 'dodge') {
+            action.setLoop(THREE.LoopOnce, 1);
+            action.clampWhenFinished = true;
+            action.reset().play();
+            unit.mixer.addEventListener('finished', () => {
+              if (!unit.isDead) this.playAnimation(unit, 'idle');
+            });
+          } else {
+            action.play();
+          }
+          return; // Skeleton anim worked
+        } catch { /* fall through to procedural */ }
       }
-      
-      unit.currentAnim = animName;
-    } catch {
-      // Skeleton mismatch - use procedural animation
     }
+
+    // Procedural animation fallback (always works)
+    // These are applied in update() based on currentAnim
   }
 
   updateHealthBar(unit: GameUnit): void {
@@ -370,9 +383,106 @@ export class UnitFactory {
   }
 
   update(units: GameUnit[], delta: number): void {
+    const time = performance.now() * 0.001;
     for (const unit of units) {
+      if (unit.isDead) continue;
+
+      // Update skeleton mixer if present
       if (unit.mixer) unit.mixer.update(delta);
+
+      // Procedural animation fallback (always runs — adds life even if skeleton anims work)
+      const mesh = unit.mesh;
+      if (unit.currentAnim === 'run') {
+        // Bobbing motion while moving
+        mesh.position.y = Math.abs(Math.sin(time * 8 + unit.mesh.id)) * 0.15;
+        // Slight lean forward
+        mesh.rotation.x = Math.sin(time * 6) * 0.05;
+      } else if (unit.currentAnim === 'attack') {
+        // Lunge forward pulse
+        const pulse = Math.sin(time * 12) * 0.5;
+        mesh.scale.setScalar(1 + Math.max(0, pulse) * 0.15);
+        mesh.position.y = Math.max(0, pulse * 0.1);
+      } else if (unit.currentAnim === 'hit') {
+        // Recoil
+        mesh.position.y = Math.abs(Math.sin(time * 15)) * 0.1;
+        mesh.rotation.z = Math.sin(time * 10) * 0.15;
+      } else {
+        // Idle — gentle breathing bob
+        mesh.position.y = Math.sin(time * 2 + unit.mesh.id) * 0.05;
+        mesh.rotation.x = 0;
+        mesh.rotation.z = 0;
+        // Reset scale if it was pulsed from attack
+        const s = mesh.scale.x;
+        if (Math.abs(s - 1) > 0.01) mesh.scale.setScalar(1);
+      }
     }
+  }
+
+  private createPlaceholderUnit(faction: FactionId, role: UnitRole, owner: 'player' | 'enemy'): THREE.Group {
+    const group = new THREE.Group();
+    const isHero = role === 'hero_king' || role === 'hero_queen';
+    const height = isHero ? 2.0 : 1.4;
+    const radius = isHero ? 0.5 : 0.35;
+
+    // Body capsule
+    const bodyGeo = new THREE.CapsuleGeometry(radius, height * 0.5, 4, 8);
+    const factionColor = faction === 'elves' ? 0x22aa44 : 0xaa4422;
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: factionColor,
+      roughness: 0.6,
+      metalness: 0.2,
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = height * 0.5;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head sphere
+    const headGeo = new THREE.SphereGeometry(radius * 0.7, 8, 8);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xeebb99, roughness: 0.5 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = height * 0.85;
+    head.castShadow = true;
+    group.add(head);
+
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.06, 6, 6);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: owner === 'player' ? 0x44aaff : 0xff4444 });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.12, height * 0.88, radius * 0.5);
+    group.add(leftEye);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.12, height * 0.88, radius * 0.5);
+    group.add(rightEye);
+
+    // Weapon indicator for role
+    if (role.includes('ranged') || role === 'hero_queen') {
+      // Bow-like arc
+      const bowGeo = new THREE.TorusGeometry(0.3, 0.04, 4, 8, Math.PI);
+      const bowMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+      const bow = new THREE.Mesh(bowGeo, bowMat);
+      bow.position.set(0.4, height * 0.55, 0);
+      bow.rotation.z = Math.PI / 2;
+      group.add(bow);
+    } else {
+      // Sword
+      const swordGeo = new THREE.BoxGeometry(0.08, 0.6, 0.04);
+      const swordMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8 });
+      const sword = new THREE.Mesh(swordGeo, swordMat);
+      sword.position.set(0.4, height * 0.45, 0);
+      group.add(sword);
+    }
+
+    // Hero crown
+    if (isHero) {
+      const crownGeo = new THREE.ConeGeometry(0.2, 0.3, 5);
+      const crownMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.7, roughness: 0.2 });
+      const crown = new THREE.Mesh(crownGeo, crownMat);
+      crown.position.y = height * 0.95 + 0.15;
+      group.add(crown);
+    }
+
+    return group;
   }
 
   dispose(): void {
