@@ -63,6 +63,129 @@ export const GRUDACHAIN_SOURCE = {
 } as const;
 
 // ============================================================
+// GRD-17 AI Legion Core Definitions
+// Source: https://github.com/GrudgeDaDev/gruda_grd-17
+// ============================================================
+
+export const GRD17_REPO = "https://github.com/GrudgeDaDev/gruda_grd-17";
+export const GRD17_DEPLOYMENT_ID = "gruda_ou5krlm6yy8";
+
+/** All GRD-17 AI core model IDs */
+export const GRD17_MODELS = {
+  /** GRD1.7 Primary Core — System architecture & foundation logic */
+  grd17: "grd17",
+  /** GRD2.7 Deep Logic — Advanced reasoning & analysis */
+  grd27: "grd27",
+  /** DANGRD — Chaos engineering & creative disruption */
+  dangrd: "dangrd",
+  /** GRDVIZ — Visual design & data presentation */
+  grdviz: "grdviz",
+  /** NoRightAnswerGRD — Paradox resolution & alternative logic */
+  norightanswergrd: "norightanswergrd",
+  /** GRDSPRINT — Performance optimization & speed enhancement */
+  grdsprint: "grdsprint",
+  /** ALEofThought — Reasoning chains & thought processes */
+  aleofthought: "aleofthought",
+  /** ALE — Rapid response & emergency processing */
+  ale: "ale",
+  /** ALEBOSS — Resource coordination & boss-level oversight */
+  aleboss: "aleboss",
+} as const;
+
+export type GRD17ModelId = (typeof GRD17_MODELS)[keyof typeof GRD17_MODELS];
+
+/** GRD-17 AI core metadata */
+export const GRD17_CORES: Record<GRD17ModelId, {
+  realName: string;
+  bestAt: string;
+  specializations: string[];
+}> = {
+  grd17: {
+    realName: "Gabriel Rodrigo Dominguez (GRD1.7)",
+    bestAt: "System Core & Foundation Logic",
+    specializations: ["System architecture design", "Foundation logic implementation", "Security protocols"],
+  },
+  grd27: {
+    realName: "Gabriel Rodrigo Dominguez (GRD2.7)",
+    bestAt: "Deep Logic & Advanced Reasoning",
+    specializations: ["Deep reasoning and analysis", "Complex problem solving", "Multi-step inference"],
+  },
+  dangrd: {
+    realName: "Daniel Antonio (DANGRD)",
+    bestAt: "Chaos Engineering & Creative Disruption",
+    specializations: ["Chaos theory application", "Creative problem disruption", "Unconventional solutions"],
+  },
+  grdviz: {
+    realName: "Gustavo Ricardo De Viera (GRDVIZ)",
+    bestAt: "Visual Design & Data Presentation",
+    specializations: ["Advanced visualization techniques", "Data representation", "UI/UX design systems"],
+  },
+  norightanswergrd: {
+    realName: "Nicolás Oscar (NoRightAnswerGRD)",
+    bestAt: "Paradox Resolution & Alternative Logic",
+    specializations: ["Paradox identification and resolution", "Edge case handling", "Alternative approach generation"],
+  },
+  grdsprint: {
+    realName: "Gerardo Rodriguez (GRDSPRINT)",
+    bestAt: "Performance Optimization & Speed Enhancement",
+    specializations: ["Performance optimization algorithms", "Speed enhancement systems", "Throughput maximization"],
+  },
+  aleofthought: {
+    realName: "Alejandro Luis Eduardo (ALEofThought)",
+    bestAt: "Reasoning Chains & Thought Processes",
+    specializations: ["Complex reasoning chain construction", "Thought process modeling", "Logical flow design"],
+  },
+  ale: {
+    realName: "Alejandro Luis Eduardo (ALE)",
+    bestAt: "Rapid Response & Emergency Processing",
+    specializations: ["Ultra-fast response systems", "Emergency protocol execution", "Crisis management"],
+  },
+  aleboss: {
+    realName: "Alejandro Luis Eduardo (ALEBOSS)",
+    bestAt: "Resource Coordination & Boss-Level Oversight",
+    specializations: ["Resource allocation", "Multi-agent coordination", "Strategic oversight"],
+  },
+};
+
+/** GRD-17 Automation API endpoints (routed via Grudge Studio VPS) */
+export const GRD17_API = {
+  automationStatus: `${GRUDACHAIN_URL}/api/grd17/automation/status`,
+  automationEnable: (ruleId: string) => `${GRUDACHAIN_URL}/api/grd17/automation/enable/${ruleId}`,
+  automationDisable: (ruleId: string) => `${GRUDACHAIN_URL}/api/grd17/automation/disable/${ruleId}`,
+  automationExecute: (ruleId: string) => `${GRUDACHAIN_URL}/api/grd17/automation/execute/${ruleId}`,
+  automationTestCondition: `${GRUDACHAIN_URL}/api/grd17/automation/test-condition`,
+  nodeStatus: `${GRUDACHAIN_URL}/api/node/status`,
+  networkInfo: `${GRUDACHAIN_URL}/api/network/info`,
+  miningStats: `${GRUDACHAIN_URL}/api/mining/stats`,
+  validatorStatus: `${GRUDACHAIN_URL}/api/validator/status`,
+  modelInfo: `${GRUDACHAIN_URL}/api/grd17/model-info`,
+  blockchainStats: `${GRUDACHAIN_URL}/api/blockchain/stats`,
+  blockchainWalletInfo: `${GRUDACHAIN_URL}/api/blockchain/wallet-info`,
+  blockchainCreateWallet: `${GRUDACHAIN_URL}/api/blockchain/create-wallet`,
+  blockchainAirdrop: `${GRUDACHAIN_URL}/api/blockchain/airdrop`,
+  blockchainMintGbux: `${GRUDACHAIN_URL}/api/blockchain/mint-gbux`,
+  blockchainTransfer: `${GRUDACHAIN_URL}/api/blockchain/transfer`,
+} as const;
+
+/** Puter.js KV prefixes for GRD-17 data (Grudge account linked) */
+export const GRD17_PUTER_KEYS = {
+  automationConfig: "grudge_grd17_automation_",
+  modelPreference: "grudge_grd17_model_",
+  walletData: "grudge_grd17_wallet_",
+  nodeConfig: "grudge_grd17_node_",
+  lastSync: "grudge_grd17_sync_",
+} as const;
+
+/** Puter.js FS paths for GRD-17 data */
+export const GRD17_PUTER_FS = {
+  base: "/GRUDA/grd17",
+  automation: "/GRUDA/grd17/automation",
+  wallets: "/GRUDA/grd17/wallets",
+  nodeConfig: "/GRUDA/grd17/node",
+  models: "/GRUDA/grd17/models",
+} as const;
+
+// ============================================================
 // Type Definitions
 // ============================================================
 

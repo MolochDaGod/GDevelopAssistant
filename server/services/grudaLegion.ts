@@ -9,7 +9,10 @@
  */
 
 import type { Express } from "express";
-import { GRUDACHAIN_URL, GRUDACHAIN_API, GAME_API_GRUDA, GRUDACHAIN_SOURCE, WCS_URL } from "../../shared/grudachain";
+import {
+  GRUDACHAIN_URL, GRUDACHAIN_API, GAME_API_GRUDA, GRUDACHAIN_SOURCE, WCS_URL,
+  GRD17_MODELS, GRD17_CORES, GRD17_API, GRD17_PUTER_KEYS, GRD17_PUTER_FS, GRD17_REPO, GRD17_DEPLOYMENT_ID,
+} from "../../shared/grudachain";
 
 const PROXY_TIMEOUT_MS = 15_000;
 
@@ -197,6 +200,141 @@ export function registerGrudaLegionRoutes(app: Express) {
 
   app.get("/api/gruda-legion/admin-ecosystem", async (_req, res) => {
     const result = await proxyFetch(GRUDACHAIN_API.adminEcosystem);
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── GRD-17 AI Legion model-info endpoint ───
+  // Returns all GRD-17 AI core metadata for client-side model selection
+  app.get("/api/gruda-legion/grd17/model-info", (_req, res) => {
+    res.json({
+      repo: GRD17_REPO,
+      deploymentId: GRD17_DEPLOYMENT_ID,
+      models: GRD17_MODELS,
+      cores: GRD17_CORES,
+      puterStorage: {
+        kvPrefixes: GRD17_PUTER_KEYS,
+        fsPaths: GRD17_PUTER_FS,
+      },
+    });
+  });
+
+  // ─── GRD-17 Automation proxy routes ───
+  app.get("/api/gruda-legion/grd17/automation/status", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.automationStatus);
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/automation/enable/:ruleId", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.automationEnable(req.params.ruleId), { method: "POST" });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/automation/disable/:ruleId", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.automationDisable(req.params.ruleId), { method: "POST" });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/automation/execute/:ruleId", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.automationExecute(req.params.ruleId), { method: "POST" });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/automation/test-condition", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.automationTestCondition, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── GRD-17 Node / Blockchain proxy routes ───
+  app.get("/api/gruda-legion/grd17/node/status", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.nodeStatus);
+    res.status(result.status).json(result.data);
+  });
+
+  app.get("/api/gruda-legion/grd17/network/info", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.networkInfo);
+    res.status(result.status).json(result.data);
+  });
+
+  app.get("/api/gruda-legion/grd17/mining/stats", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.miningStats);
+    res.status(result.status).json(result.data);
+  });
+
+  app.get("/api/gruda-legion/grd17/validator/status", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.validatorStatus);
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── GRD-17 Blockchain / Wallet proxy routes ───
+  app.get("/api/gruda-legion/grd17/blockchain/stats", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainStats);
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/blockchain/wallet-info", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainWalletInfo, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/blockchain/create-wallet", async (_req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainCreateWallet, { method: "POST" });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/blockchain/airdrop", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainAirdrop, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/blockchain/mint-gbux", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainMintGbux, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  app.post("/api/gruda-legion/grd17/blockchain/transfer", async (req, res) => {
+    const result = await proxyFetch(GRD17_API.blockchainTransfer, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  // ─── GRD-17 model-aware chat ───
+  // Extends the base /api/gruda-legion/chat to support GRD-17 specific model IDs
+  app.post("/api/gruda-legion/grd17/chat", async (req, res) => {
+    const { message, model, temperature, context } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "message is required" });
+    }
+
+    // Validate model is a known GRD-17 core or fall back to grd17 primary
+    const grd17Models = Object.values(GRD17_MODELS) as string[];
+    const resolvedModel = grd17Models.includes(model) ? model : GRD17_MODELS.grd17;
+
+    const result = await proxyFetch(GRUDACHAIN_API.chat, {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        model: resolvedModel,
+        temperature: temperature ?? 0.7,
+        context: context || {},
+        source: "grd17-legion",
+      }),
+    });
+
     res.status(result.status).json(result.data);
   });
 
