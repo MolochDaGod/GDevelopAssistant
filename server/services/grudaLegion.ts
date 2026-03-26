@@ -15,6 +15,9 @@ import {
 } from "../../shared/grudachain";
 import { aiService } from "../services/ai";
 
+// Grudge ID service — id.grudge-studio.com (identity + auth)
+const GRUDGE_ID_SERVICE_URL = process.env.GRUDGE_ID_URL || "https://id.grudge-studio.com";
+
 // ── Server-side conversation history store ──────────────────────────────────
 // Keeps last 20 messages per user+core in memory as fallback when
 // the client is not signed into Puter.  Cleared on server restart.
@@ -548,6 +551,48 @@ export function registerGrudaLegionRoutes(app: Express) {
       hasPuterApiKey: !!process.env.PUTER_API_KEY,
       modelsAvailable: 500,
     });
+  });
+
+  // ── Grudge ID — Puter onboarding and identity routes ───────────────────────────────────────────────────────────────────────────────
+  //
+  // These proxy the grudge-id service (id.grudge-studio.com).
+  // They implement the GRUDGE STUDIO PIP monetisation scheme:
+  //   • Every visitor gets a Puter account (temp or real)
+  //   • Puter UUID → Grudge ID (single identity across all auth methods)
+  //   • All subsequent puter.ai / puter.kv / puter.fs calls charge the USER’S
+  //     Puter account → GRUDGE STUDIO earns PIP revenue from that engagement
+  //
+  // POST /api/grudge-id/link-puter — called by puter-onboarding.ts autoOnboard()
+  app.post("/api/grudge-id/link-puter", async (req, res) => {
+    const result = await proxyFetch(`${GRUDGE_ID_SERVICE_URL}/identity/link-puter`, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  // POST /api/grudge-id/link-auth — called by puter-onboarding.ts linkAuth()
+  app.post("/api/grudge-id/link-auth", async (req, res) => {
+    const result = await proxyFetch(`${GRUDGE_ID_SERVICE_URL}/identity/link-auth`, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  // POST /api/grudge-id/claim-account — called by puter-onboarding.ts claimAccount()
+  app.post("/api/grudge-id/claim-account", async (req, res) => {
+    const result = await proxyFetch(`${GRUDGE_ID_SERVICE_URL}/identity/claim-account`, {
+      method: "POST",
+      body: JSON.stringify(req.body),
+    });
+    res.status(result.status).json(result.data);
+  });
+
+  // GET /api/grudge-id/:grudgeId — public profile lookup
+  app.get("/api/grudge-id/:grudgeId", async (req, res) => {
+    const result = await proxyFetch(`${GRUDGE_ID_SERVICE_URL}/identity/${req.params.grudgeId}`);
+    res.status(result.status).json(result.data);
   });
 
   console.log("✅ GRUDA Legion proxy routes registered");
