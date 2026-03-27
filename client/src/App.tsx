@@ -64,6 +64,7 @@ const CryptCrawlers = lazy(() => import("@/pages/crypt-crawlers"));
 const WarlordSuite = lazy(() => import("@/pages/warlord-suite"));
 const ConnectionsPage = lazy(() => import("@/pages/connections"));
 const NexusNemesis = lazy(() => import("@/pages/nexus-nemesis"));
+const CardForge = lazy(() => import("@/pages/card-forge"));
 
 function PageLoader() {
   return (
@@ -125,6 +126,7 @@ function Router() {
         <Route path="/crypt-crawlers" component={CryptCrawlers} />
         <Route path="/warlord-suite/:page?" component={WarlordSuite} />
         <Route path="/nexus-nemesis" component={NexusNemesis} />
+        <Route path="/card-forge" component={CardForge} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -177,6 +179,7 @@ function Header() {
     if (location === "/crypt-crawlers") return "Crypt Crawlers";
     if (location.startsWith("/warlord-suite")) return "Warlord Suite";
     if (location === "/nexus-nemesis") return "Nexus Nemesis";
+    if (location === "/card-forge") return "Card Forge";
     return "Grudge Brawl";
   };
 

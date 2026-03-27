@@ -4,6 +4,7 @@ import {
   Joystick, Puzzle, Zap, Rocket, Box, Plane, Shield, Target, Crosshair, Map,
   Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2,
   Compass, Fish, Hammer, FolderOpen, HardDrive, Globe, Warehouse, Link2,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -62,6 +63,12 @@ const mainMenuItems = [
     title: "Asset Gallery",
     url: "/asset-gallery",
     icon: Box,
+  },
+  {
+    title: "Card Forge",
+    url: "/card-forge",
+    icon: CreditCard,
+    badge: "TCG+NFT",
   },
   {
     title: "Skill Tree Editor",
