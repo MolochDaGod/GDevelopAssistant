@@ -1,25 +1,140 @@
+import { type Request, type Response, type NextFunction } from "express";
+
+// Extended Request type to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        username: string;
+        displayName: string;
+        email?: string;
+        isPremium: boolean;
+        isGuest: boolean;
+      };
+    }
+  }
+}
+
+const AUTH_BACKEND = process.env.GRUDGE_BACKEND_URL || "https://id.grudge-studio.com";
+
 /**
- * Legacy auth middleware — DEPRECATED.
- *
- * All JWT auth now goes through server/middleware/grudgeJwt.ts which
- * verifies tokens locally via SESSION_SECRET with a remote fallback to
- * the Grudge ID service at id.grudge-studio.com.
- *
- * This file re-exports from grudgeJwt.ts for backwards compatibility.
+ * Middleware to verify JWT/token via the Grudge auth backend.
+ * Tokens are verified by calling the auth-gateway's /auth/verify endpoint
+ * instead of connecting to the database directly.
  */
+export async function verifyAuthToken(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authHeader = req.headers.authorization;
 
-export { requireAuth as verifyAuthToken, optionalAuth } from "./grudgeJwt";
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token provided" });
+    }
 
-import type { Request, Response, NextFunction } from "express";
+    // Verify token via the Grudge auth backend
+    const upstream = await fetch(`${AUTH_BACKEND}/auth/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+      },
+    });
 
-export function requirePremium(req: Request, res: Response, next: NextFunction) {
-  if (!req.grudgeUser) return res.status(401).json({ error: "Authentication required" });
-  if (!req.grudgeUser.isPremium) return res.status(403).json({ error: "Premium account required" });
+    if (!upstream.ok) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    const data = await upstream.json();
+
+    if (!data.success || !data.user) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    const user = data.user;
+
+    // Attach user to request
+    req.user = {
+      id: user.id,
+      username: user.username,
+      displayName: user.display_name || user.displayName || user.username,
+      email: user.email || undefined,
+      isPremium: user.is_premium || user.isPremium || false,
+      isGuest: user.is_guest || user.isGuest || false,
+    };
+
+    next();
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return res.status(500).json({ error: "Authentication error" });
+  }
+}
+
+/**
+ * Optional authentication - doesn't fail if no token
+ */
+export async function optionalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    // Try to verify, but don't fail if it doesn't work
+    await verifyAuthToken(req, res, (err?: any) => {
+      if (err) {
+        console.warn("Optional auth failed:", err);
+      }
+      next();
+    });
+  } catch (error) {
+    console.warn("Optional auth error:", error);
+    next();
+  }
+}
+
+/**
+ * Require premium user
+ */
+export function requirePremium(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!req.user.isPremium) {
+    return res.status(403).json({ error: "Premium account required" });
+  }
+
   next();
 }
 
-export function requireRegistered(req: Request, res: Response, next: NextFunction) {
-  if (!req.grudgeUser) return res.status(401).json({ error: "Authentication required" });
-  if (req.grudgeUser.isGuest) return res.status(403).json({ error: "Registered account required" });
+/**
+ * Require non-guest user
+ */
+export function requireRegistered(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (req.user.isGuest) {
+    return res.status(403).json({ error: "Registered account required" });
+  }
+
   next();
 }
