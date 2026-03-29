@@ -5,6 +5,7 @@ import {
   Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2,
   Compass, Fish, Hammer, FolderOpen, HardDrive, Globe, Warehouse, Link2,
   CreditCard,
+  Cog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,6 +31,12 @@ const mainMenuItems = [
     title: "Chat Assistant",
     url: "/",
     icon: MessageSquare,
+  },
+  {
+    title: "Grudge Engine",
+    url: "/engine",
+    icon: Cog,
+    badge: "3D",
   },
   {
     title: "RTS Builder",
