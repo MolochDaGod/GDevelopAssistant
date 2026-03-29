@@ -383,7 +383,7 @@ function AssetCard({ asset, isSelected, onClick, onDoubleClick, viewMode }: Asse
       const data = await res.json();
       const glbName = asset.name.replace(/\.[^.]+$/, '.glb');
       addAsset({ id: crypto.randomUUID(), name: glbName, type: 'model', path: data.outputPath });
-      addConsoleLog({ type: 'success' as any, message: `Converted to GLB: ${glbName}`, source: 'Convert' });
+      addConsoleLog({ type: 'info', message: `Converted to GLB: ${glbName}`, source: 'Convert' });
     } catch (err: any) {
       addConsoleLog({ type: 'error', message: `Conversion failed: ${err.message}`, source: 'Convert' });
     }
