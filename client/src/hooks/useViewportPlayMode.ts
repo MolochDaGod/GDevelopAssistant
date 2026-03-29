@@ -54,6 +54,7 @@ export function useViewportPlayMode({
       createPhysicsWorld(scene, { x: 0, y: -9.81, z: 0 }).then(world => {
         if (cancelled) { world.dispose(); return; }
         physicsWorldRef.current = world;
+        setPhysicsWorld(world);
         world.createGround(200, 200, 0);
 
         if (sceneData) {
