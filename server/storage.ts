@@ -259,7 +259,8 @@ export class DatabaseStorage implements IStorage {
     await db
       .insert(users)
       .values(userData)
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: users.id,
         set: {
           ...userData,
           updatedAt: new Date(),
@@ -462,7 +463,8 @@ export class DatabaseStorage implements IStorage {
     await db
       .insert(userSettings)
       .values(settings)
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: userSettings.userId,
         set: {
           ...settings,
           updatedAt: new Date(),

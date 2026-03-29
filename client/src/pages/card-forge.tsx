@@ -93,7 +93,7 @@ const FRAME_URLS: Record<CardRarity, string> = {
 async function grd17Hash(data: string): Promise<string> {
   const encoded = new TextEncoder().encode(data);
   const buf = await crypto.subtle.digest("SHA-256", encoded);
-  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
   const ts  = Date.now().toString(36).toUpperCase().padStart(8, "0");
   // Format: GRD-17-{TIMESTAMP}-{SHA256[:8]}-{SHA256[8:16]}
   return `GRD-17-${ts}-${hex.slice(0, 8)}-${hex.slice(8, 16)}`;

@@ -1,12 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
   grudgeId: string;
   username: string;
   role?: string;
   isPremium?: boolean;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  createdAt?: string;
 }
 
 /**
