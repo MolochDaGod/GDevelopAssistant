@@ -54,6 +54,7 @@ export interface AuditContext {
 export class AleHermesService {
   private agentName = "ALE_HERMES";
   private assetServiceUrl: string;
+  private client: any = null; // VPS storage client (initialized lazily)
 
   constructor() {
     this.assetServiceUrl = ASSET_SERVICE_URL;

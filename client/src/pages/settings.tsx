@@ -309,7 +309,7 @@ export default function SettingsPage() {
                         Member Since
                       </Label>
                       <div className="font-medium" data-testid="text-created-at">
-                        {formatDate(user?.createdAt)}
+                        {user?.createdAt ? formatDate(new Date(user.createdAt)) : 'Unknown'}
                       </div>
                     </div>
                   </div>

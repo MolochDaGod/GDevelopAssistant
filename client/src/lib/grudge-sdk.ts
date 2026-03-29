@@ -145,15 +145,17 @@ class GrudgeSDKService {
     if (!window.puter) return { success: false, error: 'Puter.js not available' };
 
     try {
-      const result = await window.puter.auth.signIn();
-      if (!result) return { success: false, error: 'Sign in cancelled' };
+      await window.puter.auth.signIn();
+      const puterUserData = await window.puter.auth.getUser();
+      if (!puterUserData) return { success: false, error: 'Sign in cancelled' };
 
+      const puterUser = puterUserData as any;
       const resp = await fetch(`${this.config.authUrl}/auth/puter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          puterUuid: result.uuid,
-          puterUsername: result.username,
+          puterUuid: puterUser.uuid,
+          puterUsername: puterUser.username,
         }),
       });
 
@@ -162,12 +164,12 @@ class GrudgeSDKService {
 
       localStorage.setItem(SDK_IDENTITY_KEY, data.token);
       localStorage.setItem(SDK_GRUDGE_ID_KEY, data.grudgeId);
-      localStorage.setItem(SDK_USERNAME_KEY, result.username);
+      localStorage.setItem(SDK_USERNAME_KEY, puterUser.username);
 
       this.identity = {
         grudgeId: data.grudgeId,
         puterId: `GRUDGE-${data.grudgeId.substring(0, 8).toUpperCase()}`,
-        username: result.username,
+        username: puterUser.username,
         token: data.token,
         expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       };

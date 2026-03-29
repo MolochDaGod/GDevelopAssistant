@@ -1511,7 +1511,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.get("/api/players/me", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1527,7 +1527,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/players/profile", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       
       const existing = await storage.getPlayerProfile(claims.sub);
       if (existing) {
@@ -1560,7 +1560,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.patch("/api/players/me", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1590,7 +1590,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.get("/api/players/me/characters", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1606,7 +1606,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/players/me/characters/:characterId", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1645,7 +1645,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.get("/api/players/me/wallet", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1687,7 +1687,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.get("/api/players/me/achievements", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1730,7 +1730,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/lobbies", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1766,7 +1766,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/lobbies/:id/join", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1802,7 +1802,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/lobbies/:id/leave", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1818,7 +1818,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.patch("/api/lobbies/:id/player", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1834,7 +1834,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.delete("/api/lobbies/:id", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const profile = await storage.getPlayerProfile(claims.sub);
       
       if (!profile) {
@@ -1876,7 +1876,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.get("/api/settings", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const settings = await storage.getUserSettings(claims.sub);
       res.json(settings || {});
     } catch (error) {
@@ -1886,7 +1886,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.put("/api/settings", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const settings = await storage.upsertUserSettings({
         userId: claims.sub,
         ...req.body,
@@ -2410,7 +2410,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
         return res.status(404).json({ error: "Asset not found" });
       }
       
-      await objectStorageService.downloadObject(result.file, res);
+      await objectStorageService.downloadObject((result as any).file, res);
     } catch (error: any) {
       console.error("Error fetching asset:", error);
       res.status(500).json({ error: "Failed to fetch asset", details: error.message });
@@ -2820,7 +2820,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
   // Saved characters API (MMO-style character creation)
   app.get("/api/saved-characters", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const userId = claims?.sub;
       const characters = await storage.getSavedCharacters(userId);
       res.json(characters);
@@ -2832,7 +2832,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.post("/api/saved-characters", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const userId = claims?.sub;
       const { name, presetId, customization, colors } = req.body;
       
@@ -2858,7 +2858,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
   app.patch("/api/saved-characters/:id/activate", async (req, res) => {
     try {
-      const claims = (req.user as any)?.claims;
+      const claims = (req as any).user?.claims;
       const userId = claims?.sub;
       const characterId = req.params.id;
       
@@ -3028,7 +3028,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       const requestedPath = (req.query.path as string) || "";
       const { bucketName, objectName } = parseObjectPath(basePath);
       
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const prefix = requestedPath ? `${objectName}/${requestedPath}/` : `${objectName}/`;
       
       const [files] = await bucket.getFiles({ 
@@ -3115,7 +3115,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       }
       
       const { bucketName, objectName } = parseObjectPath(oldPath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const file = bucket.file(objectName);
       
       const pathParts = objectName.split("/");
@@ -3146,7 +3146,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       const { bucketName: baseBucketName, objectName: baseObjectName } = parseObjectPath(basePath);
       
       const { bucketName, objectName } = parseObjectPath(sourcePath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const file = bucket.file(objectName);
       
       const fileName = objectName.split("/").pop();
@@ -3173,12 +3173,12 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       }
       
       const { bucketName, objectName } = parseObjectPath(filePath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       
       // Check if it's a folder (ends with /) or if we need to delete by prefix
       if (filePath.endsWith("/")) {
         const [files] = await bucket.getFiles({ prefix: objectName });
-        await Promise.all(files.map(f => f.delete()));
+        await Promise.all(files.map((f: any) => f.delete()));
       } else {
         const file = bucket.file(objectName);
         await file.delete();
@@ -3204,7 +3204,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       const basePath = publicSearchPaths[0];
       const { bucketName, objectName: baseObjectName } = parseObjectPath(basePath);
       
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const folderPath = parentPath 
         ? `${baseObjectName}/${parentPath}/${folderName}/.keep`
         : `${baseObjectName}/${folderName}/.keep`;
@@ -3228,7 +3228,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       }
       
       const { bucketName, objectName } = parseObjectPath(filePath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const file = bucket.file(objectName);
       
       const [exists] = await file.exists();
@@ -3258,7 +3258,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       }
       
       const { bucketName, objectName } = parseObjectPath(filePath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = (objectStorageClient as any).bucket(bucketName);
       const file = bucket.file(objectName);
       
       const [exists] = await file.exists();
