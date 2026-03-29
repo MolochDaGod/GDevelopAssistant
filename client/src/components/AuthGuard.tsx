@@ -25,9 +25,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
     const authData = getAuthData();
     
     if (!authData) {
-      // No auth — redirect to in-app auth page
-      const returnUrl = encodeURIComponent(window.location.pathname);
-      navigate(`/auth?return=${returnUrl}`, { replace: true });
+      // No auth — redirect to unified Grudge auth at id.grudge-studio.com
+      const { redirectToLogin } = await import('@/lib/auth');
+      redirectToLogin(window.location.href);
       setLoading(false);
       return;
     }
