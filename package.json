@@ -2,6 +2,9 @@
   "name": "grudge-gdevelop-assistant",
   "version": "2.0.0",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "asset:drive:sync": "node scripts/google-drive-sync.mjs",
