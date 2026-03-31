@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Eye, EyeOff, Gamepad2, Wallet, Shield, MessageSquare, Github, Phone, Chrome } from "lucide-react";
 import {
-  storeAuth,
   captureAuthCallback,
   loginWithPassword,
   registerAccount,
@@ -18,6 +17,7 @@ import {
   loginWithDiscord,
   loginWithGitHub,
   loginWithWallet,
+  loginWithPuter,
   sendPhoneCode,
   verifyPhoneCode,
 } from "@/lib/auth";
@@ -144,17 +144,9 @@ export default function AuthPage() {
       const user = await (window as any).puter.auth.getUser();
       setShowGrudgeOverlay(false);
       if (!user?.uuid) return handleError("Grudge Cloud sign-in failed");
-      const res = await fetch("/api/auth/puter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ puterUuid: user.uuid, puterUsername: user.username }),
-      });
-      const data = await res.json();
-      if (data.success && data.token) {
-        storeAuth({ ...data, isPuter: true });
-        return onSuccess();
-      }
-      handleError(data.error || "Grudge Cloud authentication failed");
+      const res = await loginWithPuter(user.uuid, user.username);
+      if (res.success) return onSuccess();
+      handleError(res.error || "Grudge Cloud authentication failed");
     } catch {
       setShowGrudgeOverlay(false);
       handleError("Grudge Cloud sign-in failed — try another method");

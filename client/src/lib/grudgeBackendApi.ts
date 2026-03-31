@@ -8,11 +8,16 @@
  * If the backend is unreachable, methods return null / empty arrays gracefully.
  */
 
-// ── Base URL — proxy routes defined in server/routes/grudgeProxy.ts ──
-const GAME    = '/api/grudge/game';    // → api.grudgestudio.com
-const ACCOUNT = '/api/grudge/account'; // → account.grudgestudio.com
-const ID      = '/api/grudge/id';      // → id.grudgestudio.com
-const LAUNCHER = '/api/grudge/launcher'; // → launcher.grudgestudio.com
+// ── Base URLs ──
+// Character CRUD + game data routes DIRECTLY to the canonical backend
+// to ensure uniform data (cNFT, attributes, prefabs) across all Grudge games.
+const UNIFIED = 'https://api.grudge-studio.com/api';
+
+// Other routes still proxy through local server
+const GAME    = '/api/grudge/game';    // → api.grudge-studio.com (legacy proxy)
+const ACCOUNT = '/api/grudge/account'; // → account.grudge-studio.com
+const ID      = '/api/grudge/id';      // → id.grudge-studio.com
+const LAUNCHER = '/api/grudge/launcher'; // → launcher.grudge-studio.com
 
 // ── Auth helper ──
 export function getToken(): string | null {
@@ -266,22 +271,44 @@ export interface AIGeneratedMission {
 }
 
 // ════════════════════════════════════════════════════════════════
-// GAME API CLIENT — api.grudgestudio.com
+// GAME API CLIENT — api.grudge-studio.com
 // ════════════════════════════════════════════════════════════════
 
 export const grudgeGameApi = {
-  // ── Characters ──
+  // ── Characters (routed to canonical unified backend) ──
   async listCharacters(): Promise<GrudgeCharacter[]> {
-    return apiFetchList(`${GAME}/characters`);
+    const data = await apiFetch<any>(`${UNIFIED}/characters`);
+    const list = data?.characters || data;
+    return Array.isArray(list) ? list : [];
   },
-  async getCharacter(id: number): Promise<GrudgeCharacter | null> {
-    return apiFetch(`${GAME}/characters/${id}`);
+  async getCharacter(id: number | string): Promise<GrudgeCharacter | null> {
+    const data = await apiFetch<any>(`${UNIFIED}/characters/${id}`);
+    return data?.character || data;
   },
-  async createCharacter(data: { name: string; race: string; class: string }): Promise<GrudgeCharacter | null> {
-    return apiFetch(`${GAME}/characters`, { method: 'POST', body: JSON.stringify(data) });
+  /**
+   * Create character via unified backend.
+   * Backend validates race/class, computes attributes, generates avatar, mints cNFT.
+   */
+  async createCharacter(data: {
+    name: string;
+    raceId: string;
+    classId: string;
+    manualAttributes?: Record<string, number>;
+    gameOrigin?: string;
+  }): Promise<GrudgeCharacter | null> {
+    return apiFetch(`${UNIFIED}/characters`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...data,
+        gameOrigin: data.gameOrigin || 'gdevelop-assistant',
+      }),
+    });
   },
-  async deleteCharacter(id: number): Promise<boolean> {
-    return (await apiFetch(`${GAME}/characters/${id}`, { method: 'DELETE' })) !== null;
+  async mintCharacter(id: number | string): Promise<any> {
+    return apiFetch(`${UNIFIED}/characters/${id}/mint`, { method: 'POST' });
+  },
+  async deleteCharacter(id: number | string): Promise<boolean> {
+    return (await apiFetch(`${UNIFIED}/characters/${id}`, { method: 'DELETE' })) !== null;
   },
 
   // ── Factions ──
@@ -456,7 +483,7 @@ export const grudgeGameApi = {
 };
 
 // ════════════════════════════════════════════════════════════════
-// ACCOUNT API CLIENT — account.grudgestudio.com
+// ACCOUNT API CLIENT — account.grudge-studio.com
 // ════════════════════════════════════════════════════════════════
 
 export const grudgeAccountApi = {
@@ -523,7 +550,7 @@ export const grudgeAccountApi = {
 };
 
 // ════════════════════════════════════════════════════════════════
-// IDENTITY API CLIENT — id.grudgestudio.com
+// IDENTITY API CLIENT — id.grudge-studio.com
 // ════════════════════════════════════════════════════════════════
 
 export const grudgeIdApi = {
@@ -536,7 +563,7 @@ export const grudgeIdApi = {
 };
 
 // ════════════════════════════════════════════════════════════════
-// LAUNCHER API CLIENT — launcher.grudgestudio.com
+// LAUNCHER API CLIENT — launcher.grudge-studio.com
 // ════════════════════════════════════════════════════════════════
 
 export const grudgeLauncherApi = {
@@ -552,11 +579,28 @@ export const grudgeLauncherApi = {
 };
 
 // ════════════════════════════════════════════════════════════════
+// GAME DATA API — canonical race/class/attribute definitions
+// ════════════════════════════════════════════════════════════════
+
+export const grudgeGameDataApi = {
+  async all(): Promise<any> {
+    return apiFetch(`${UNIFIED}/game-data/all`);
+  },
+  async races(): Promise<any> {
+    return apiFetch(`${UNIFIED}/game-data/races`);
+  },
+  async classes(): Promise<any> {
+    return apiFetch(`${UNIFIED}/game-data/classes`);
+  },
+};
+
+// ════════════════════════════════════════════════════════════════
 // COMBINED EXPORT
 // ════════════════════════════════════════════════════════════════
 
 const grudgeApi = {
   game: grudgeGameApi,
+  gameData: grudgeGameDataApi,
   account: grudgeAccountApi,
   id: grudgeIdApi,
   launcher: grudgeLauncherApi,

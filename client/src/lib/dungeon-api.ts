@@ -1,14 +1,14 @@
 /**
  * Dungeon Crawler API Client
  *
- * Talks to the Grudge Backend game-api service at api.grudge-studio.com
- * for hero data, dungeon runs, match results, and leaderboards.
+ * Talks to the Grudge Backend game-api service through the shared
+ * /api/grudge/game proxy for hero data, dungeon runs, match results,
+ * and leaderboards.
  *
  * Uses the shared grudge_auth_token from localStorage for auth.
  */
 
-const GAME_API_BASE =
-  import.meta.env.VITE_GAME_API_URL || 'https://api.grudge-studio.com';
+const GAME_API_BASE = '/api/grudge/game';
 
 function getToken(): string | null {
   return localStorage.getItem('grudge_auth_token');
