@@ -13,6 +13,10 @@ import { Home, Gamepad2, Loader2 } from "lucide-react";
 import { LoadingProvider } from "@/hooks/useLoading";
 import { PuterProvider } from "@/contexts/puter-context";
 import { AuthGuard } from "@/components/AuthGuard";
+import { initGrudgeSSO } from "@/lib/grudge-sso";
+
+// Enable cross-app SSO token relay for all outbound Grudge links
+initGrudgeSSO();
 
 import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
