@@ -8,6 +8,7 @@ import { Link } from 'wouter';
 import { DesignerCanvas } from '@/components/game-designer/DesignerCanvas';
 import { NodePalette } from '@/components/game-designer/NodePalette';
 import { PropertiesPanel } from '@/components/game-designer/PropertiesPanel';
+import { GameCanvas } from '@/components/game-designer/GameCanvas';
 import { RTSMapEditor } from '@/components/rts-map-editor';
 import type { DesignerNode, Connection, NodeTemplate, DesignDocument } from '@/lib/rts-engine/designer-types';
 import { NODE_DEFAULTS } from '@/lib/rts-engine/designer-types';
@@ -34,7 +35,7 @@ export default function GrudgeWarlordsRTS() {
   const [nodes, setNodes] = useState<DesignerNode[]>(initial.nodes);
   const [connections, setConnections] = useState<Connection[]>(initial.connections);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [tab, setTab] = useState('designer');
+  const [tab, setTab] = useState('play');
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId) ?? null;
 
@@ -138,10 +139,16 @@ export default function GrudgeWarlordsRTS() {
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="mx-4 mt-2 w-fit bg-zinc-800">
+          <TabsTrigger value="play" className="text-xs">🎮 Play Game</TabsTrigger>
           <TabsTrigger value="designer" className="text-xs">🎨 Designer</TabsTrigger>
           <TabsTrigger value="map" className="text-xs">🗺️ Map Editor</TabsTrigger>
           <TabsTrigger value="admin" className="text-xs">⚙️ Admin</TabsTrigger>
         </TabsList>
+
+        {/* Play Tab */}
+        <TabsContent value="play" className="flex-1 min-h-0 m-0">
+          <GameCanvas />
+        </TabsContent>
 
         {/* Designer Tab */}
         <TabsContent value="designer" className="flex-1 flex min-h-0 m-0">
