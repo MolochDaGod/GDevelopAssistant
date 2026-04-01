@@ -255,7 +255,7 @@ export default function AuthPage() {
             </p>
             <Loader2 className="h-6 w-6 animate-spin text-red-500 mx-auto" />
             <button
-              onClick={() => { setShowGrudgeOverlay(false); setLoading(null); }}
+              onClick={() => { setShowGrudgeOverlay(false); }}
               className="text-stone-500 hover:text-stone-300 text-xs underline"
             >
               Cancel
