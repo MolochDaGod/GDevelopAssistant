@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import * as BABYLON from '@babylonjs/core';
-import { Engine, Scene, GizmoManager, DefaultRenderingPipeline, ShadowGenerator } from '@babylonjs/core';
+import { Engine, Scene, GizmoManager, ShadowGenerator } from '@babylonjs/core';
+import type { EditorPipeline } from '@/lib/post-process-pipeline';
 import { Move, RotateCw, Maximize, Grid3X3, Box, Layers, MousePointer2, Bug, Sparkles, Settings, Loader2, Circle, Cylinder, Square, Lightbulb, Sun, Camera, Keyboard, HelpCircle, User, Wand2 } from 'lucide-react';
 import { getPhysicsWorld } from '@/lib/rapier-physics';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ export function Viewport() {
   const warriorControllerRef = useRef<WarriorPlayerController | null>(null);
   const shadowGeneratorRef = useRef<ShadowGenerator | null>(null);
   const npcBehaviorsRef = useRef<Map<string, WarBearBehavior | DragonBehavior>>(new Map());
-  const renderPipelineRef = useRef<DefaultRenderingPipeline | null>(null);
+  const renderPipelineRef = useRef<EditorPipeline | null>(null);
 
   const [fps, setFps] = useState(0);
   const [drawCalls, setDrawCalls] = useState(0);

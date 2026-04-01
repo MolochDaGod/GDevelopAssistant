@@ -66,6 +66,8 @@ const ConnectionsPage = lazy(() => import("@/pages/connections"));
 const NexusNemesis = lazy(() => import("@/pages/nexus-nemesis"));
 const CardForge = lazy(() => import("@/pages/card-forge"));
 const GrudgeEngine = lazy(() => import("@/pages/grudge-engine"));
+const GrudgeThreeEngine = lazy(() => import("@/pages/grudge-three-engine"));
+const GrudgeFlatEngine = lazy(() => import("@/pages/grudge-flat-engine"));
 
 function PageLoader() {
   return (
@@ -129,6 +131,8 @@ function Router() {
         <Route path="/nexus-nemesis" component={NexusNemesis} />
         <Route path="/card-forge" component={CardForge} />
         <Route path="/engine" component={GrudgeEngine} />
+        <Route path="/three-engine" component={GrudgeThreeEngine} />
+        <Route path="/flat-engine" component={GrudgeFlatEngine} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -182,11 +186,13 @@ function Header() {
     if (location.startsWith("/warlord-suite")) return "Warlord Suite";
     if (location === "/nexus-nemesis") return "Nexus Nemesis";
     if (location === "/card-forge") return "Card Forge";
-    if (location === "/engine") return "Grudge Engine";
+    if (location === "/engine") return "Grudge Web Engine";
+    if (location === "/three-engine") return "Grudge Three Engine";
+    if (location === "/flat-engine") return "Grudge Flat Engine";
     return "Grudge Brawl";
   };
 
-  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/drift", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis", "/engine"].some(
+  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/drift", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis", "/engine", "/three-engine", "/flat-engine"].some(
     path => location === path
   );
 

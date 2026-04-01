@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skull, ArrowLeft, Sword, Shield, Wand2, Footprints } from 'lucide-react';
 import { Link } from 'wouter';
-import { SpriteEffects2DManager } from '@/lib/game-effects';
+// SpriteEffects2DManager removed (Three.js) — 2D effects will be rebuilt
+type SpriteEffects2DManager = { spawnAt: (type: string, x: number, y: number, color: string, opts?: any) => void; dispose: () => void };
 
 // ── Tile types ─────────────────────────────────────────────────────
 
@@ -450,9 +451,7 @@ export default function CryptCrawlers() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (containerRef.current && !sfxRef.current) {
-      sfxRef.current = new SpriteEffects2DManager(containerRef.current);
-    }
+    // SpriteEffects2DManager removed — 2D VFX disabled until rebuild
 
     lastRef.current = performance.now();
     let moveTimer = 0;

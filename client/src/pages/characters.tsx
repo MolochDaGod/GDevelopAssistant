@@ -1,121 +1,117 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useCachedQuery } from "@/hooks/useCachedQuery";
+/**
+ * Characters Page — Unified Grudge Account Characters
+ *
+ * Uses the `accounts` + `grudgeCharacters` tables exclusively.
+ * All 6 races, 4 classes. cNFT minting per character.
+ */
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sword, Shield, Zap, Heart, Lock, Check, LogIn, Plus, Trash2, Users, Crown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useGrudgeAccount, type GrudgeCharacterLocal } from "@/hooks/useGrudgeAccount";
+import { mintCharacterAsNFT } from "@/lib/nft-service";
+import {
+  Sword, Shield, Zap, Heart, LogIn, Plus, Trash2,
+  Coins, Loader2, Gem, Sparkles, Star,
+} from "lucide-react";
 import { useState } from "react";
-import { grudgeGameApi, type GrudgeCharacter, type GrudgeFaction } from "@/lib/grudgeBackendApi";
-import type { Character, PlayerCharacter } from "@shared/schema";
 
-const RARITY_COLORS = {
-  common: "bg-gray-500",
-  rare: "bg-blue-500",
-  epic: "bg-purple-500",
-  legendary: "bg-amber-500",
-};
+// ── Game Design Constants ────────────────────────────────────────────────────
 
-const TYPE_ICONS: Record<string, any> = {
+const RACES = [
+  { id: "barbarian", label: "Barbarian", icon: "\u{1FA93}", color: "bg-orange-700" },
+  { id: "dwarf",     label: "Dwarf",     icon: "\u26CF\uFE0F",  color: "bg-amber-800" },
+  { id: "elf",       label: "Elf",       icon: "\u{1F3F9}", color: "bg-emerald-700" },
+  { id: "human",     label: "Human",     icon: "\u2694\uFE0F",  color: "bg-blue-700" },
+  { id: "orc",       label: "Orc",       icon: "\u{1F480}", color: "bg-red-800" },
+  { id: "undead",    label: "Undead",    icon: "\u2620\uFE0F",  color: "bg-purple-800" },
+] as const;
+
+const CLASSES = [
+  { id: "warrior",      label: "Warrior",      icon: Sword,    desc: "Shields, swords, 2H weapons. Stamina sprint system." },
+  { id: "mage",         label: "Mage",         icon: Zap,      desc: "Staffs, tomes, wands. Particle teleport blocks." },
+  { id: "ranger",       label: "Ranger",       icon: Shield,   desc: "Bows, crossbows, daggers. Parry-counter mechanics." },
+  { id: "shapeshifter", label: "Shapeshifter", icon: Sparkles, desc: "Bear, Raptor, Large Bird forms. Multi-role class." },
+] as const;
+
+const CLASS_ICON_MAP: Record<string, typeof Sword> = {
   warrior: Sword,
   mage: Zap,
-  archer: Shield,
-  legendary: Heart,
+  ranger: Shield,
+  shapeshifter: Sparkles,
 };
 
-const RACES = ['Human', 'Worge', 'Elf', 'Undead'] as const;
-const CLASSES = ['Warrior', 'Mage', 'Ranger', 'Worge'] as const;
+function getRaceConfig(raceId: string | undefined) {
+  return RACES.find((r) => r.id === raceId?.toLowerCase()) || RACES[3];
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function CharactersPage() {
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, isAuthenticated } = useAuth();
+  const {
+    characters, charactersLoading,
+    createCharacter, deleteCharacter,
+    hasWallet,
+  } = useGrudgeAccount();
   const { toast } = useToast();
+
   const [showCreate, setShowCreate] = useState(false);
-  const [newChar, setNewChar] = useState({ name: '', race: RACES[0], class: CLASSES[0] });
+  const [newChar, setNewChar] = useState({ name: "", raceId: "human", classId: "warrior" });
+  const [mintingId, setMintingId] = useState<string | null>(null);
 
-  // ── Local DB characters (existing) ──
-  const { data: allCharacters, isLoading: charactersLoading } = useCachedQuery<Character[]>(
-    ["/api/characters"],
-    { ttlMs: 600_000 },
-  );
+  const handleCreate = () => {
+    if (!newChar.name.trim()) {
+      toast({ variant: "destructive", title: "Name required" });
+      return;
+    }
+    createCharacter.mutate(newChar, {
+      onSuccess: () => {
+        setShowCreate(false);
+        setNewChar({ name: "", raceId: "human", classId: "warrior" });
+        toast({ title: "Character Created", description: "Your Grudge Warlord has been born!" });
+      },
+      onError: (e: Error) => toast({ variant: "destructive", title: "Error", description: e.message }),
+    });
+  };
 
-  const { data: playerCharacters } = useCachedQuery<PlayerCharacter[]>(
-    ["/api/players/me/characters"],
-    { ttlMs: 120_000, enabled: isAuthenticated },
-  );
+  const handleDelete = (ch: GrudgeCharacterLocal) => {
+    deleteCharacter.mutate(ch.id, {
+      onSuccess: () => toast({ title: "Character Deleted" }),
+      onError: (e: Error) => toast({ variant: "destructive", title: "Error", description: e.message }),
+    });
+  };
 
-  // ── Grudge Backend characters ──
-  const { data: grudgeChars = [], isLoading: grudgeLoading, refetch: refetchGrudge } = useQuery<GrudgeCharacter[]>({
-    queryKey: ['grudge', 'characters'],
-    queryFn: () => grudgeGameApi.listCharacters(),
-    enabled: isAuthenticated,
-  });
-
-  const { data: factions = [] } = useQuery<GrudgeFaction[]>({
-    queryKey: ['grudge', 'factions'],
-    queryFn: () => grudgeGameApi.listFactions(),
-  });
-
-  const createGrudgeChar = useMutation({
-    mutationFn: (data: { name: string; race: string; class: string }) => grudgeGameApi.createCharacter(data).then(r => { if (!r) throw new Error('Failed to create'); return r; }),
-    onSuccess: () => {
-      refetchGrudge();
-      setShowCreate(false);
-      setNewChar({ name: '', race: RACES[0], class: CLASSES[0] });
-      toast({ title: 'Character Created', description: 'Your Grudge Warlord has been born!' });
-    },
-    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
-  });
-
-  const deleteGrudgeChar = useMutation({
-    mutationFn: (id: number) => grudgeGameApi.deleteCharacter(id).then(ok => { if (!ok) throw new Error('Delete failed'); }),
-    onSuccess: () => { refetchGrudge(); toast({ title: 'Character Deleted' }); },
-    onError: (e: Error) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
-  });
-
-  const unlockCharacterMutation = useMutation({
-    mutationFn: async (characterId: string) => {
-      const response = await apiRequest("POST", `/api/players/me/characters/${characterId}`, {});
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/players/me/characters"] });
-      toast({
-        title: "Character Unlocked",
-        description: "New character added to your collection!",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    },
-  });
-
-  const isCharacterOwned = (characterId: string) => {
-    return playerCharacters?.some(pc => pc.characterId === characterId);
+  const handleMint = async (ch: GrudgeCharacterLocal) => {
+    setMintingId(ch.id);
+    try {
+      const result = await mintCharacterAsNFT(ch.id);
+      if (result.success) {
+        toast({ title: "Character Minted!", description: `cNFT: ${result.mintAddress?.slice(0, 16)}...` });
+      } else {
+        toast({ variant: "destructive", title: "Mint Failed", description: result.error });
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Mint Error", description: err?.message });
+    } finally {
+      setMintingId(null);
+    }
   };
 
   if (!isAuthenticated && !authLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">Character Collection</h2>
-          <p className="text-muted-foreground">Sign in to view and manage your characters</p>
+          <h2 className="text-2xl font-bold">Characters</h2>
+          <p className="text-muted-foreground">Sign in to create and manage your Grudge Warlords</p>
         </div>
-        <Button asChild data-testid="button-login">
-          <a href="/auth">
-            <LogIn className="mr-2 h-4 w-4" />
-            Sign In
-          </a>
+        <Button asChild>
+          <a href="/auth"><LogIn className="mr-2 h-4 w-4" /> Sign In</a>
         </Button>
       </div>
     );
@@ -124,248 +120,192 @@ export default function CharactersPage() {
   if (charactersLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">Loading characters...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col min-h-full p-4 sm:p-6">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold" data-testid="text-characters-title">Character Collection</h1>
-        <p className="text-sm text-muted-foreground">Unlock and manage your heroes</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">Characters</h1>
+          <p className="text-sm text-muted-foreground">
+            {characters.length} Warlord{characters.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <Dialog open={showCreate} onOpenChange={setShowCreate}>
+          <DialogTrigger asChild>
+            <Button><Plus className="mr-1 h-4 w-4" /> New Character</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create Grudge Character</DialogTitle>
+              <DialogDescription>Choose a name, race, and class for your new warlord.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={newChar.name}
+                  onChange={(e) => setNewChar({ ...newChar, name: e.target.value })}
+                  placeholder="Enter character name"
+                  maxLength={32}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Race</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {RACES.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => setNewChar({ ...newChar, raceId: r.id })}
+                      className={`flex items-center gap-2 rounded-lg border p-2.5 text-sm transition-colors ${
+                        newChar.raceId === r.id
+                          ? "border-primary bg-primary/10 text-primary font-semibold"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <span className="text-lg">{r.icon}</span>
+                      <span>{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Class</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CLASSES.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setNewChar({ ...newChar, classId: c.id })}
+                      className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${
+                        newChar.classId === c.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <c.icon className={`h-5 w-5 shrink-0 ${newChar.classId === c.id ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className="min-w-0">
+                        <div className={`text-sm font-medium ${newChar.classId === c.id ? "text-primary" : ""}`}>{c.label}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight">{c.desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button onClick={handleCreate} disabled={!newChar.name.trim() || createCharacter.isPending}>
+                {createCharacter.isPending ? "Creating..." : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs defaultValue="grudge" className="flex-1">
-        <TabsList className="mb-4 w-full sm:w-auto">
-          <TabsTrigger value="grudge" className="flex-1 sm:flex-none" data-testid="tab-grudge-characters">
-            <Crown className="mr-1 h-4 w-4" /> Grudge Warlords ({grudgeChars.length})
-          </TabsTrigger>
-          <TabsTrigger value="all" className="flex-1 sm:flex-none" data-testid="tab-all-characters">All Characters</TabsTrigger>
-          <TabsTrigger value="owned" className="flex-1 sm:flex-none" data-testid="tab-owned-characters">My Collection ({playerCharacters?.length || 0})</TabsTrigger>
-        </TabsList>
+      {characters.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center p-8 text-center">
+          <Sword className="h-12 w-12 text-muted-foreground mb-4" />
+          <CardTitle className="mb-2">No Characters Yet</CardTitle>
+          <CardDescription>Create your first Grudge Warlord to get started!</CardDescription>
+        </Card>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {characters.map((ch) => {
+            const race = getRaceConfig(ch.raceId);
+            const ClassIcon = CLASS_ICON_MAP[ch.classId?.toLowerCase() || ""] || Sword;
+            const isMinting = mintingId === ch.id;
 
-        {/* ── Grudge Warlords Tab ── */}
-        <TabsContent value="grudge" className="mt-0">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Characters from the Grudge Warlords backend</p>
-            <Dialog open={showCreate} onOpenChange={setShowCreate}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-1 h-4 w-4" /> New Character</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Grudge Character</DialogTitle>
-                  <DialogDescription>Choose a name, race, and class for your new warlord.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label>Name</Label>
-                    <Input value={newChar.name} onChange={(e) => setNewChar({ ...newChar, name: e.target.value })} placeholder="Enter name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Race</Label>
-                    <Select value={newChar.race} onValueChange={(v: any) => setNewChar({ ...newChar, race: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{RACES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Class</Label>
-                    <Select value={newChar.class} onValueChange={(v: any) => setNewChar({ ...newChar, class: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-                  <Button onClick={() => createGrudgeChar.mutate(newChar)} disabled={!newChar.name.trim() || createGrudgeChar.isPending}>
-                    {createGrudgeChar.isPending ? 'Creating...' : 'Create'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {grudgeLoading ? (
-            <div className="text-muted-foreground text-center py-8">Loading Grudge characters...</div>
-          ) : grudgeChars.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-8 text-center">
-              <Sword className="h-12 w-12 text-muted-foreground mb-4" />
-              <CardTitle className="mb-2">No Grudge Characters</CardTitle>
-              <CardDescription>Create your first Grudge Warlord to get started!</CardDescription>
-            </Card>
-          ) : (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {grudgeChars.map((ch) => (
-                <Card key={ch.id} className="hover-elevate" data-testid={`card-grudge-${ch.id}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600">
-                          <Sword className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{ch.name}</CardTitle>
-                          <CardDescription className="capitalize">{ch.race} {ch.class}</CardDescription>
-                        </div>
+            return (
+              <Card key={ch.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg ${race.color}`}>
+                        {race.icon}
                       </div>
+                      <div>
+                        <CardTitle className="text-lg">{ch.name}</CardTitle>
+                        <CardDescription className="capitalize">
+                          {ch.raceId || "Unknown"} {ch.classId || "Unknown"}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline">Lv {ch.level}</Badge>
+                      {ch.isNft && (
+                        <Badge className="bg-green-500/20 text-green-400 border-0 text-[9px]">
+                          <Gem className="h-3 w-3 mr-0.5" /> cNFT
+                        </Badge>
+                      )}
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-red-500" /><span>{ch.health}/{ch.max_health} HP</span></div>
-                      <div className="flex items-center gap-1"><Zap className="h-3 w-3 text-yellow-500" /><span>{ch.xp} XP</span></div>
-                      <div className="flex items-center gap-1"><Users className="h-3 w-3 text-blue-500" /><span>{ch.faction || 'No faction'}</span></div>
-                      <div className="flex items-center gap-1"><Shield className="h-3 w-3 text-green-500" /><span>{ch.gold} Gold</span></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-3 w-3 text-red-500" />
+                      <span>{ch.currentHealth ?? "\u2014"} HP</span>
                     </div>
-                    {ch.island && <p className="text-xs text-muted-foreground">Island: {ch.island}</p>}
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteGrudgeChar.mutate(ch.id)}>
-                      <Trash2 className="mr-1 h-3 w-3" /> Delete
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 text-yellow-500" />
+                      <span>{ch.experience} XP</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <ClassIcon className="h-3 w-3 text-blue-500" />
+                      <span className="capitalize">{ch.classId || "\u2014"}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Coins className="h-3 w-3 text-yellow-600" />
+                      <span>{ch.gold} Gold</span>
+                    </div>
+                  </div>
 
-        <TabsContent value="all" className="mt-0">
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {allCharacters?.map((character) => {
-              const owned = isCharacterOwned(character.id);
-              const stats = character.baseStats as { health: number; attack: number; defense: number; speed: number };
-              const Icon = TYPE_ICONS[character.type] || Sword;
+                  {ch.faction && (
+                    <p className="text-xs text-muted-foreground">Faction: {ch.faction}</p>
+                  )}
 
-              return (
-                <Card key={character.id} className={`hover-elevate ${owned ? 'ring-2 ring-primary' : ''}`} data-testid={`card-character-${character.id}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${RARITY_COLORS[character.rarity as keyof typeof RARITY_COLORS]}`}>
-                          <Icon className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{character.name}</CardTitle>
-                          <CardDescription className="capitalize">{character.type}</CardDescription>
-                        </div>
-                      </div>
-                      <Badge className={RARITY_COLORS[character.rarity as keyof typeof RARITY_COLORS]}>
-                        {character.rarity}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-3 w-3 text-red-500" />
-                        <span>{stats.health} HP</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Sword className="h-3 w-3 text-orange-500" />
-                        <span>{stats.attack} ATK</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Shield className="h-3 w-3 text-blue-500" />
-                        <span>{stats.defense} DEF</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-yellow-500" />
-                        <span>{stats.speed} SPD</span>
-                      </div>
-                    </div>
+                  {ch.nftMintAddress && (
+                    <p className="text-[10px] text-muted-foreground font-mono truncate">
+                      Mint: {ch.nftMintAddress}
+                    </p>
+                  )}
 
-                    {owned ? (
-                      <Button className="w-full" variant="secondary" disabled data-testid={`button-owned-${character.id}`}>
-                        <Check className="mr-2 h-4 w-4" />
-                        Owned
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full"
-                        onClick={() => unlockCharacterMutation.mutate(character.id)}
-                        disabled={unlockCharacterMutation.isPending}
-                        data-testid={`button-unlock-${character.id}`}
+                  <div className="flex gap-2">
+                    {!ch.isNft && hasWallet && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => handleMint(ch)}
+                        disabled={isMinting}
                       >
-                        {character.unlockLevel > 1 ? (
-                          <>
-                            <Lock className="mr-2 h-4 w-4" />
-                            Requires Level {character.unlockLevel}
-                          </>
-                        ) : (
-                          "Unlock Free"
-                        )}
+                        {isMinting
+                          ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Minting...</>
+                          : <><Gem className="h-3 w-3 mr-1" /> Mint cNFT</>
+                        }
                       </Button>
                     )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="owned" className="mt-0">
-          {!playerCharacters || playerCharacters.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-6 sm:p-8 text-center">
-              <Sword className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
-              <CardTitle className="mb-2 text-lg sm:text-xl">No Characters Yet</CardTitle>
-              <CardDescription>Unlock characters from the collection to add them here!</CardDescription>
-            </Card>
-          ) : (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {playerCharacters.map((pc) => {
-                const character = allCharacters?.find(c => c.id === pc.characterId);
-                if (!character) return null;
-                const stats = character.baseStats as { health: number; attack: number; defense: number; speed: number };
-                const Icon = TYPE_ICONS[character.type] || Sword;
-
-                return (
-                  <Card key={pc.id} className="hover-elevate" data-testid={`card-owned-${pc.id}`}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${RARITY_COLORS[character.rarity as keyof typeof RARITY_COLORS]}`}>
-                            <Icon className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">{character.name}</CardTitle>
-                            <CardDescription>Level {pc.level}</CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant="outline">
-                          {pc.xp} XP
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Heart className="h-3 w-3 text-red-500" />
-                          <span>{stats.health} HP</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Sword className="h-3 w-3 text-orange-500" />
-                          <span>{stats.attack} ATK</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Shield className="h-3 w-3 text-blue-500" />
-                          <span>{stats.defense} DEF</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-yellow-500" />
-                          <span>{stats.speed} SPD</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className={`${!ch.isNft && hasWallet ? "" : "flex-1"} text-xs`}
+                      onClick={() => handleDelete(ch)}
+                      disabled={deleteCharacter.isPending}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

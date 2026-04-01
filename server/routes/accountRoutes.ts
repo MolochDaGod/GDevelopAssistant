@@ -258,5 +258,51 @@ export function registerAccountRoutes(app: Express) {
     }
   });
 
+  // ─── DELETE /api/account/characters/:id ───
+  // Delete a character belonging to the caller's account
+  app.delete("/api/account/characters/:id", requireAuth, async (req, res) => {
+    try {
+      const grudgeId = req.grudgeUser?.grudgeId;
+      if (!grudgeId) return res.status(401).json({ error: "No grudgeId in token" });
+
+      const [acct] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.grudgeId, grudgeId))
+        .limit(1);
+
+      if (!acct) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+
+      const charId = req.params.id;
+      const [char] = await db
+        .select()
+        .from(grudgeCharacters)
+        .where(and(eq(grudgeCharacters.id, charId), eq(grudgeCharacters.accountId, acct.id)))
+        .limit(1);
+
+      if (!char) {
+        return res.status(404).json({ error: "Character not found" });
+      }
+
+      await db.delete(grudgeCharacters).where(eq(grudgeCharacters.id, charId));
+
+      // Decrement totalCharacters
+      await db
+        .update(accounts)
+        .set({
+          totalCharacters: Math.max(0, (acct.totalCharacters ?? 1) - 1),
+          updatedAt: new Date(),
+        })
+        .where(eq(accounts.id, acct.id));
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("DELETE /api/account/characters/:id error:", err.message);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   console.log("✅ Account routes registered (/api/account/*)");
 }

@@ -26,6 +26,7 @@ import { registerAccountRoutes } from "./routes/accountRoutes";
 import { registerOpenRTSRoutes } from "./routes/openrts";
 import { registerCoolifyRoutes } from "./routes/coolifyProxy";
 import { registerEconomyRoutes } from "./routes/economyRoutes";
+import { registerNftRoutes } from "./routes/nftRoutes";
 import { overdriveEngine } from "./services/overdriveEngine";
 import OpenAI from "openai";
 
@@ -147,6 +148,7 @@ registerAccountRoutes(app);
 registerOpenRTSRoutes(app);
 registerCoolifyRoutes(app);
 registerEconomyRoutes(app);
+registerNftRoutes(app);
 
 // ════════════════════════════════════════════
 // DB-backed routes → proxy to Grudge backend

@@ -1,11 +1,11 @@
-import { 
+import {
   MessageSquare, BookOpen, Settings, 
   Swords, Wand2, Users, User, Wallet, Trophy, Sword, Crown,
   Joystick, Puzzle, Zap, Rocket, Box, Plane, Shield, Target, Crosshair, Map,
   Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2,
   Compass, Fish, Hammer, FolderOpen, HardDrive, Globe, Warehouse, Link2,
   CreditCard,
-  Cog,
+  Cog, Layers, Cuboid,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,17 +26,32 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthData, logout } from "@/lib/auth";
 
+const engineItems = [
+  {
+    title: "Grudge Web Engine",
+    url: "/engine",
+    icon: Cog,
+    badge: "Babylon",
+  },
+  {
+    title: "Grudge Three Engine",
+    url: "/three-engine",
+    icon: Cuboid,
+    badge: "Three",
+  },
+  {
+    title: "Grudge Flat Engine",
+    url: "/flat-engine",
+    icon: Layers,
+    badge: "2D",
+  },
+];
+
 const mainMenuItems = [
   {
     title: "Chat Assistant",
     url: "/",
     icon: MessageSquare,
-  },
-  {
-    title: "Grudge Engine",
-    url: "/engine",
-    icon: Cog,
-    badge: "3D",
   },
   {
     title: "RTS Builder",
@@ -335,6 +350,34 @@ export function AppSidebar() {
                           {item.badge}
                         </Badge>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-1">
+            <Cog className="h-3 w-3 text-red-400" />
+            Engines
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {engineItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    data-active={location === item.url}
+                    data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.title}</span>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-red-500/20 text-red-400 border-0">
+                        {item.badge}
+                      </Badge>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

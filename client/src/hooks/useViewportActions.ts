@@ -5,6 +5,7 @@ import { SceneLoader, Vector3 } from '@babylonjs/core';
 import { useEngineStore } from '@/lib/engine-store';
 import { autoRigModel } from '@/lib/ai-auto-rig';
 import { CHARACTER_HEIGHTS, calculateScaleForUnits, formatHeight } from '@/lib/units';
+import type { EditorPipeline } from '@/lib/post-process-pipeline';
 
 type GizmoMode = 'select' | 'move' | 'rotate' | 'scale';
 
@@ -14,7 +15,7 @@ interface Params {
   gizmoMeshRef: MutableRefObject<Map<string, BABYLON.AbstractMesh>>;
   animationGroupsRef: MutableRefObject<Map<string, BABYLON.AnimationGroup[]>>;
   gizmoManagerRef: MutableRefObject<BABYLON.GizmoManager | null>;
-  renderPipelineRef: MutableRefObject<BABYLON.DefaultRenderingPipeline | null>;
+  renderPipelineRef: MutableRefObject<EditorPipeline | null>;
   setLoadingModels: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
@@ -141,13 +142,13 @@ export function useViewportActions({
   }, [inspectorVisible, sceneRef, addConsoleLog]);
 
   const togglePostProcess = useCallback(() => {
-    const pipeline = renderPipelineRef.current;
-    if (!pipeline) return;
+    const editorPipeline = renderPipelineRef.current;
+    if (!editorPipeline) return;
     const newState = !postProcessEnabled;
-    pipeline.bloomEnabled = newState;
-    pipeline.fxaaEnabled = newState;
-    pipeline.imageProcessingEnabled = newState;
-    if (pipeline.imageProcessing) pipeline.imageProcessing.toneMappingEnabled = newState;
+    editorPipeline.setBloom(newState);
+    editorPipeline.setToneMapping(newState);
+    editorPipeline.setChromaticAberration(false);
+    editorPipeline.pipeline.fxaaEnabled = newState;
     setPostProcessEnabled(newState);
     addConsoleLog({ type: 'info', message: `Post-processing ${newState ? 'enabled' : 'disabled'}`, source: 'Viewport' });
   }, [postProcessEnabled, renderPipelineRef, addConsoleLog]);

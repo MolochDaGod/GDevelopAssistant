@@ -53,9 +53,10 @@ const DEFAULT_OPTIONS: ExportOptions = {
 };
 
 /**
- * Collect all asset paths from a scene
+ * Collect all asset paths from a scene's project data.
+ * Reusable by any module that needs to know what assets a scene references.
  */
-function collectAssets(scene: Scene): string[] {
+export function collectAssets(scene: Scene): string[] {
   const assets = new Set<string>();
   
   scene.objects.forEach(obj => {

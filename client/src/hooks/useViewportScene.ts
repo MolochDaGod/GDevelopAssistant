@@ -4,7 +4,7 @@ import * as BABYLON from '@babylonjs/core';
 import {
   Engine, Scene, ArcRotateCamera, HemisphericLight, DirectionalLight,
   MeshBuilder, Vector3, Color3, Color4, StandardMaterial, PointLight,
-  TransformNode, GizmoManager, DefaultRenderingPipeline, SceneLoader,
+  TransformNode, GizmoManager, SceneLoader,
   PBRMaterial, CubeTexture, ShadowGenerator
 } from '@babylonjs/core';
 import { GridMaterial } from '@babylonjs/materials';
@@ -18,6 +18,7 @@ import { WarriorPlayerController } from '@/lib/warrior-controller';
 import { createParticleManager } from '@/lib/particle-system';
 import { createAudioManager } from '@/lib/audio-manager';
 import { configureSkeletonAnimations } from '@/lib/skeleton-animation-setup';
+import { createEditorPipeline, type EditorPipeline } from '@/lib/post-process-pipeline';
 
 interface Params {
   canvasRef: MutableRefObject<HTMLCanvasElement | null>;
@@ -29,7 +30,7 @@ interface Params {
   animationGroupsRef: MutableRefObject<Map<string, BABYLON.AnimationGroup[]>>;
   shadowGeneratorRef: MutableRefObject<ShadowGenerator | null>;
   controllerRef: MutableRefObject<CharacterController | WarriorPlayerController | null>;
-  renderPipelineRef: MutableRefObject<DefaultRenderingPipeline | null>;
+  renderPipelineRef: MutableRefObject<EditorPipeline | null>;
   setFps: React.Dispatch<React.SetStateAction<number>>;
   setDrawCalls: React.Dispatch<React.SetStateAction<number>>;
   setVertices: React.Dispatch<React.SetStateAction<number>>;
@@ -353,20 +354,12 @@ export function useViewportScene({
       });
     }
 
-    const pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, [camera]);
-    pipeline.samples = 4;
-    pipeline.bloomEnabled = true;
-    pipeline.bloomThreshold = 0.95;
-    pipeline.bloomWeight = 0.08;
-    pipeline.bloomKernel = 32;
-    pipeline.bloomScale = 0.4;
-    pipeline.fxaaEnabled = true;
-    pipeline.imageProcessingEnabled = true;
-    pipeline.imageProcessing.toneMappingEnabled = true;
-    pipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    pipeline.imageProcessing.contrast = 1.05;
-    pipeline.imageProcessing.exposure = 1.0;
-    renderPipelineRef.current = pipeline;
+    const editorPipeline = createEditorPipeline(scene, camera, {
+      bloom: { enabled: true, intensity: 0.08, threshold: 0.95, scale: 0.4 },
+      toneMapping: { enabled: true, exposure: 1.0, contrast: 1.05 },
+      antialiasing: { enabled: true, samples: 4 },
+    });
+    renderPipelineRef.current = editorPipeline;
 
     const resizeObserver = new ResizeObserver(() => { engine.resize(); });
     if (canvasRef.current) resizeObserver.observe(canvasRef.current);

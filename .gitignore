@@ -24,5 +24,8 @@ extensions/
 .env
 .env*.local
 
+# Reference engine project (not part of build)
+Grudge-Engine-Web-1/
+
 # Vercel
 .vercel
