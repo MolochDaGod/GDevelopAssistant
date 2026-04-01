@@ -9,8 +9,12 @@
 export const GRUDACHAIN_URL = process.env.GRUDACHAIN_URL || "https://api.grudge-studio.com";
 export const WCS_URL = process.env.WCS_URL || "https://warlord-crafting-suite.vercel.app";
 
+<<<<<<< SEARCH
 // GAME_API_GRUDA is the canonical Grudge Studio API endpoint
 export const GAME_API_GRUDA = process.env.GAME_API_GRUDA || "https://api.grudge-studio.com";
+=======
+// GAME_API_GRUDA is the canonical Grudge Studio API endpoint (same as GRUDACHAIN_URL by default)
+export const GAME_API_GRUDA = process.env.GAME_API_GRUDA || GRUDACHAIN_URL;
 
 // Vercel deployment (static landing page + serverless functions)
 export const GRUDACHAIN_VERCEL_URL = "https://grudachain.vercel.app";
