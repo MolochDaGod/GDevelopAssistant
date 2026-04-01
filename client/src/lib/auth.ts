@@ -3,17 +3,18 @@
  *
  * All auth flows produce the same result: a JWT stored as `grudge_auth_token`.
  *
- * Auth calls go DIRECTLY to the Grudge ID service to avoid dependency on
- * the local /api proxy (which may be unavailable in serverless environments).
+ * Auth calls route through the SAME-ORIGIN /api proxy (registered in
+ * grudgeAuth.ts) which forwards to id.grudge-studio.com. This avoids
+ * CORS issues across all Grudge Studio deployment domains.
  *
  * Supported flows:
- *  1. Username/password → id.grudge-studio.com/auth/login → JWT
- *  2. Puter.js sign-in  → id.grudge-studio.com/auth/puter → JWT
+ *  1. Username/password → /api/login → JWT
+ *  2. Puter.js sign-in  → /api/auth/puter → JWT
  *  3. Auth-gateway redirect (external login page) → JWT via URL param
- *  4. Guest login → id.grudge-studio.com/auth/guest → JWT
- *  5. Discord/Google/GitHub OAuth → id.grudge-studio.com/auth/{provider}
- *  6. Phantom wallet → id.grudge-studio.com/auth/wallet → JWT
- *  7. Phone SMS → id.grudge-studio.com/auth/phone-send|verify → JWT
+ *  4. Guest login → /api/guest → JWT
+ *  5. Discord/Google/GitHub OAuth → /api/auth/{provider}
+ *  6. Phantom wallet → /api/auth/wallet → JWT
+ *  7. Phone SMS → /api/auth/phone → JWT
  *
  * Source of truth: id.grudge-studio.com (shared `accounts` table)
  */
@@ -98,8 +99,9 @@ export function redirectToLogin(customReturnUrl?: string) {
   window.location.href = `/auth?return=${returnUrl}`;
 }
 
-// ── Grudge ID service (direct calls, no local proxy needed) ──
-const _ID_BASE = 'https://id.grudge-studio.com';
+// ── Auth API base: same-origin proxy avoids CORS issues across all domains ──
+// The proxy in grudgeAuth.ts forwards /api/login etc. → id.grudge-studio.com
+const _API = '';  // same-origin, e.g. /api/login
 
 // ── Phantom Connect SDK (lazy-loaded singleton) ──
 import { BrowserSDK, AddressType } from '@phantom/browser-sdk';
@@ -123,13 +125,12 @@ export function getPhantomSdk() {
 
 /** Logout — invalidates JWT server-side, clears tokens, redirects to auth page. */
 export function logout() {
-  // Fire-and-forget: invalidate JWT so it cannot be replayed
   const token = localStorage.getItem(KEYS.token);
   if (token) {
-    fetch(`${_ID_BASE}/api/auth/logout`, {
+    fetch(`${_API}/api/auth/logout`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    }).catch(() => {}); // best-effort
+    }).catch(() => {});
   }
   clearAuth();
   window.location.href = '/auth';
@@ -139,7 +140,7 @@ export function logout() {
 export function logoutSilent() {
   const token = localStorage.getItem(KEYS.token);
   if (token) {
-    fetch(`${_ID_BASE}/api/auth/logout`, {
+    fetch(`${_API}/api/auth/logout`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     }).catch(() => {});
@@ -213,9 +214,9 @@ export function captureAuthCallback(): boolean {
 
 // ── Auth flows ──
 
-/** Login with username + password → Grudge ID directly. */
+/** Login with username + password via same-origin proxy. */
 export async function loginWithPassword(username: string, password: string) {
-  const res = await fetch(`${_ID_BASE}/auth/login`, {
+  const res = await fetch(`${_API}/api/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: username, password }),
@@ -227,9 +228,9 @@ export async function loginWithPassword(username: string, password: string) {
   return data;
 }
 
-/** Register → Grudge ID directly. */
+/** Register via same-origin proxy. */
 export async function registerAccount(username: string, password: string, email?: string) {
-  const res = await fetch(`${_ID_BASE}/auth/register`, {
+  const res = await fetch(`${_API}/api/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password, email }),
@@ -243,7 +244,7 @@ export async function registerAccount(username: string, password: string, email?
 
 /** Bridge Grudge Cloud (Puter) auth to a Grudge JWT. Call after puter.auth.signIn(). */
 export async function loginWithPuter(puterUuid: string, puterUsername: string) {
-  const res = await fetch(`${_ID_BASE}/auth/puter`, {
+  const res = await fetch(`${_API}/api/auth/puter`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ puterUuid, puterUsername }),
@@ -255,10 +256,10 @@ export async function loginWithPuter(puterUuid: string, puterUsername: string) {
   return data;
 }
 
-/** Guest login → Grudge ID directly. */
+/** Guest login via same-origin proxy. */
 export async function loginAsGuest(deviceId?: string) {
   const id = deviceId || crypto.randomUUID().slice(0, 12);
-  const res = await fetch(`${_ID_BASE}/auth/guest`, {
+  const res = await fetch(`${_API}/api/guest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId: id }),
@@ -270,43 +271,57 @@ export async function loginAsGuest(deviceId?: string) {
   return data;
 }
 
-/** Initiate Google OAuth → redirect to Grudge ID. */
+/** Initiate Google OAuth → goes through same-origin server callback. */
 export async function loginWithGoogle(returnUrl?: string) {
-  const callbackUrl = `${window.location.origin}/auth`;
   const state = encodeURIComponent(returnUrl || '/');
-  window.location.href = `${_ID_BASE}/auth/google?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}`;
+  // Fetch the OAuth URL from our proxy, which builds the correct redirect_uri
+  try {
+    const res = await fetch(`${_API}/api/auth/google?state=${state}`);
+    const data = await res.json();
+    if (data.url) { window.location.href = data.url; return; }
+  } catch {}
+  // Fallback: direct to server endpoint which will redirect
+  window.location.href = `${_API}/api/auth/google?state=${state}`;
 }
 
-/** Initiate Discord OAuth → redirect to Grudge ID. */
+/** Initiate Discord OAuth → goes through same-origin server callback. */
 export async function loginWithDiscord(returnUrl?: string) {
-  const callbackUrl = `${window.location.origin}/auth`;
   const state = encodeURIComponent(returnUrl || '/');
-  window.location.href = `${_ID_BASE}/auth/discord?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}`;
+  try {
+    const res = await fetch(`${_API}/api/auth/discord?state=${state}`);
+    const data = await res.json();
+    if (data.url) { window.location.href = data.url; return; }
+  } catch {}
+  window.location.href = `${_API}/api/auth/discord?state=${state}`;
 }
 
-/** Initiate GitHub OAuth → redirect to Grudge ID. */
+/** Initiate GitHub OAuth → goes through same-origin server callback. */
 export async function loginWithGitHub(returnUrl?: string) {
-  const callbackUrl = `${window.location.origin}/auth`;
   const state = encodeURIComponent(returnUrl || '/');
-  window.location.href = `${_ID_BASE}/auth/github?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}`;
+  try {
+    const res = await fetch(`${_API}/api/auth/github?state=${state}`);
+    const data = await res.json();
+    if (data.url) { window.location.href = data.url; return; }
+  } catch {}
+  window.location.href = `${_API}/api/auth/github?state=${state}`;
 }
 
 /** Send phone verification code via SMS. */
 export async function sendPhoneCode(phone: string) {
-  const res = await fetch(`${_ID_BASE}/auth/phone-send`, {
+  const res = await fetch(`${_API}/api/auth/phone`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ action: 'send', phone }),
   });
   return res.json();
 }
 
 /** Verify phone code and get JWT. */
 export async function verifyPhoneCode(phone: string, code: string) {
-  const res = await fetch(`${_ID_BASE}/auth/phone-verify`, {
+  const res = await fetch(`${_API}/api/auth/phone`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, code }),
+    body: JSON.stringify({ action: 'verify', phone, code }),
   });
   const data = await res.json();
   if (data.success && data.token) {
@@ -317,7 +332,6 @@ export async function verifyPhoneCode(phone: string, code: string) {
 
 /** Connect wallet via Phantom Connect SDK → link to Grudge ID. */
 export async function loginWithWallet(walletAddress?: string, walletType = 'solana') {
-  // If no address provided, connect via Phantom SDK first
   let address = walletAddress;
   if (!address) {
     const sdk = getPhantomSdk();
@@ -325,11 +339,9 @@ export async function loginWithWallet(walletAddress?: string, walletType = 'sola
     const solAddr = addresses.find((a: any) => a.addressType === 'solana');
     address = solAddr?.address || addresses[0]?.address;
     if (!address) throw new Error('No wallet address returned');
-    // Store wallet address for other parts of the app
     localStorage.setItem('grudge_wallet_address', address);
   }
-  // Link wallet to Grudge account
-  const res = await fetch(`${_ID_BASE}/auth/wallet`, {
+  const res = await fetch(`${_API}/api/auth/wallet`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -356,12 +368,12 @@ export async function loginWithPhantomConnect(provider: 'google' | 'phantom' | '
   return loginWithWallet(address);
 }
 
-/** Verify current token with Grudge ID directly. Returns full profile or null. */
+/** Verify current token via same-origin proxy. Returns full profile or null. */
 export async function verifyToken() {
   const token = localStorage.getItem(KEYS.token);
   if (!token) return null;
   try {
-    const res = await fetch(`${_ID_BASE}/auth/verify`, {
+    const res = await fetch(`${_API}/api/auth/verify`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.status === 401) { clearAuth(); return null; }
