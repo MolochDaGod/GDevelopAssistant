@@ -13,38 +13,43 @@ interface GameEntry {
 }
 
 const GAMES: GameEntry[] = [
-  // â”€â”€ Games â”€â”€
-  { id: "gruda-wars", title: "Gruda Wars", description: "RPG dungeon crawler with hero system, arena PvP, and 32 world zones", image: "/assets/games/gruda-wars.png", route: "/gruda-wars", tags: ["RPG", "PvP"], category: "games" },
-  { id: "crown-clash", title: "Crown Clash", description: "Strategic card battle arena with deck building", image: "/assets/games/crown-clash.png", route: "/crown-clash", tags: ["PvE", "Cards"], category: "games" },
-  { id: "grudge-arena", title: "Grudge Arena", description: "3D combat arena â€” fight for glory", image: "/assets/games/arena.jpg", route: "/arena", tags: ["3D", "PvP"], category: "games" },
-  { id: "grudge-gangs", title: "Grudge Gangs", description: "Team-based MOBA brawler gameplay", image: "/assets/games/scourge.png", route: "/moba", tags: ["MOBA"], category: "games" },
-  { id: "overdrive", title: "Overdrive", description: "High-speed racing with power-ups", image: "/assets/games/grudge-brand.png", route: "/grudge-drive", tags: ["Racing"], category: "games" },
-  { id: "decay", title: "Decay", description: "Survival FPS â€” fight the horde", image: "/assets/games/warlords.jpg", route: "/decay", tags: ["FPS", "Survival"], category: "games" },
-  { id: "swarm-rts", title: "Swarm RTS", description: "Real-time swarm strategy battles", image: "/assets/games/world-map.gif", route: "/swarm-rts", tags: ["RTS"], category: "games" },
-  { id: "mmo-world", title: "MMO World", description: "Massively multiplayer RPG prototype", image: "/assets/games/mmo-world.png", route: "/mmo", tags: ["MMO"], category: "games" },
-  { id: "flight-sim", title: "Sky Command", description: "Aerial combat & flight simulator", image: "/assets/games/card-game.jpg", route: "/flight", tags: ["3D", "Flight"], category: "games" },
-  { id: "grudge-swarm", title: "Grudge Swarm", description: "Galactic swarm battles in space", image: "/assets/games/grudge-brand.png", route: "/grudge-swarm", tags: ["RTS"], category: "games" },
-  { id: "realm-protector", title: "Realm Protector", description: "Tower defense realm guardian", image: "/assets/games/scourge.png", route: "/realm", tags: ["TD"], category: "games" },
-  { id: "pixel-warrior", title: "Pixel Warrior", description: "2D platformer action game", image: "/assets/games/gruda-wars.png", route: "/platformer", tags: ["2D"], category: "games" },
-  { id: "nexus-nemesis", title: "Nexus Nemesis", description: "Web3 trading card game with PvP battles, NFT minting, and Season 0 cards", image: "/assets/games/card-game.jpg", route: "/nexus-nemesis", tags: ["TCG", "Web3", "PvP"], category: "games" },
-  // â”€â”€ Tools â”€â”€
-  { id: "rts-builder", title: "RTS Builder", description: "Visual RTS game level designer", image: "/assets/games/world-map.gif", route: "/rts-builder", tags: ["Builder"], category: "tools" },
-  { id: "map-editor", title: "Map Editor", description: "2D/3D tile-based map editor", image: "/assets/games/world-map.gif", route: "/map-editor", tags: ["2D/3D"], category: "tools" },
-  { id: "char-editor", title: "Character Editor", description: "Design and balance characters", image: "/assets/games/arena.jpg", route: "/character-editor", tags: ["AI"], category: "tools" },
-  { id: "skill-tree", title: "Skill Tree Editor", description: "Create ability progression trees", image: "/assets/games/crown-clash.png", route: "/skill-tree", tags: ["Editor"], category: "tools" },
-  { id: "effects", title: "Effects Lab", description: "Particle & shader effects playground", image: "/assets/games/grudge-brand.png", route: "/effects", tags: ["VFX"], category: "tools" },
-  { id: "asset-gallery", title: "Asset Gallery", description: "Browse and manage game assets", image: "/assets/games/card-game.jpg", route: "/asset-gallery", tags: ["Assets"], category: "tools" },
-  // â”€â”€ Platform â”€â”€
-  { id: "warlords-steam", title: "Grudge Warlords", description: "Main game on Steam â€” 3D MMORPG", image: "/assets/games/warlords.jpg", route: "https://store.steampowered.com/app/2707990/Grudge/", tags: ["Steam", "3D"], category: "platform", external: true },
-  { id: "objectstore", title: "ObjectStore API", description: "Game data SDK â€” 500+ items & sprites", image: "/assets/games/logo.png", route: "https://molochdagod.github.io/ObjectStore", tags: ["API"], category: "platform", external: true },
-  { id: "discord", title: "Discord Server", description: "Join the Grudge Warlords community", image: "/assets/games/grudge-brand.png", route: "https://discord.gg/FtGtmxmwkh", tags: ["Community"], category: "platform", external: true },
+  // ── PvP Games ──
+  { id: "grudge-rts", title: "Grudge Warlords RTS", description: "WC3-style RTS with heroes, creep camps, tech tree, and island warfare", image: "/assets/games/world-map.gif", route: "/grudge-swarm", tags: ["RTS", "PvP", "Heroes"], category: "pvp" },
+  { id: "grudge-arena", title: "Grudge Arena", description: "PvP combat arena with class abilities and combos", image: "/assets/games/arena.jpg", route: "/grudge-arena", tags: ["PvP", "Arena"], category: "pvp" },
+  { id: "grudge-box", title: "GrudgeBox", description: "2D sprite fighting game with multi-class combat", image: "/assets/games/scourge.png", route: "/grudge-box", tags: ["PvP", "Fighting"], category: "pvp" },
+  { id: "nexus-nemesis", title: "Nexus Nemesis", description: "Strategic PvP battlefield with deck-building mechanics", image: "/assets/games/card-game.jpg", route: "/nexus-nemesis", tags: ["PvP", "TCG"], category: "pvp" },
+  { id: "betta-warlords", title: "Betta Warlords", description: "Auto-battler with faction units and tier upgrades", image: "/assets/games/grudge-brand.png", route: "/betta-warlords", tags: ["PvP", "Auto-battle"], category: "pvp" },
+  { id: "crown-clash", title: "Crown Clash", description: "3D combat for the crown — last player standing wins", image: "/assets/games/crown-clash.png", route: "/crown-clash", tags: ["PvP", "3D"], category: "pvp" },
+  // ── PvE Games ──
+  { id: "crypt-crawlers", title: "Crypt Crawlers", description: "BSP dungeon crawler with fog of war, A* enemies, multi-floor progression", image: "/assets/games/gruda-wars.png", route: "/crypt-crawlers", tags: ["PvE", "Dungeon"], category: "pve" },
+  { id: "mmo-world", title: "MMO World", description: "Open world MMO with WCS heroes, crafting, and souls-like combat", image: "/assets/games/mmo-world.png", route: "/mmo", tags: ["PvE", "MMO"], category: "pve" },
+  { id: "reef-hunt", title: "Reef Hunt", description: "Underwater exploration, hunting, and treasure diving", image: "/assets/games/grudge-brand.png", route: "/reef-hunt", tags: ["PvE", "Explore"], category: "pve" },
+  { id: "gruda-wars", title: "Gruda Wars", description: "RPG with hero system, 32 world zones, arena PvP, and 5 professions", image: "/assets/games/gruda-wars.png", route: "/gruda-wars", tags: ["RPG", "PvE"], category: "pve" },
+  { id: "decay", title: "Decay", description: "Survival horror — fight the undead horde", image: "/assets/games/warlords.jpg", route: "/decay", tags: ["PvE", "Horror"], category: "pve" },
+  // ── Grudge Universe ──
+  { id: "grudge-crafting", title: "Grudge Crafting", description: "Crafting bench with 3,425 items from ObjectStore database", image: "/assets/games/grudge-brand.png", route: "/grudge-crafting", tags: ["Crafting", "Economy"], category: "grudge" },
+  { id: "grudge-factory", title: "Grudge Factory", description: "Production management — build your empire", image: "/assets/games/scourge.png", route: "/grudge-factory", tags: ["Management"], category: "grudge" },
+  { id: "grudge-gangs", title: "Grudge Gangs", description: "Sprite combat showcase with SpriteEffects2D", image: "/assets/games/scourge.png", route: "/grudge-gangs", tags: ["Action"], category: "grudge" },
+  { id: "warlord-suite", title: "Warlord Suite", description: "Full character builder, arsenal, crafting, skill trees — all WCS data", image: "/assets/games/warlords.jpg", route: "/warlord-suite/character-builder", tags: ["RPG", "Builder"], category: "grudge" },
+  // ── Tools ──
+  { id: "grudge-drive", title: "Grudge Drive", description: "Asset management and sprite deployment tool", image: "/assets/games/logo.png", route: "/grudge-drive", tags: ["Assets"], category: "tools" },
+  { id: "char-editor", title: "Character Editor", description: "Design characters with WCS stats and equipment", image: "/assets/games/arena.jpg", route: "/character-editor", tags: ["Editor"], category: "tools" },
+  { id: "effects", title: "Effects Lab", description: "VFX testing playground with 29+ effects", image: "/assets/games/grudge-brand.png", route: "/effects-playground", tags: ["VFX"], category: "tools" },
+  { id: "map-editor", title: "Map Editor", description: "Terrain and island map builder", image: "/assets/games/world-map.gif", route: "/map-editor", tags: ["Editor"], category: "tools" },
+  { id: "skill-tree", title: "Skill Tree Editor", description: "Interactive skill tree designer for all classes", image: "/assets/games/crown-clash.png", route: "/skill-tree-editor", tags: ["Editor"], category: "tools" },
+  // ── Platform ──
+  { id: "warlords-site", title: "Grudge Warlords", description: "Play the flagship game at grudgewarlords.com", image: "/assets/games/warlords.jpg", route: "https://grudgewarlords.com", tags: ["Flagship"], category: "platform", external: true },
+  { id: "objectstore", title: "ObjectStore API", description: "10,000+ game assets, 49 JSON endpoints", image: "/assets/games/logo.png", route: "https://molochdagod.github.io/ObjectStore", tags: ["API"], category: "platform", external: true },
+  { id: "discord", title: "Discord", description: "Join the Grudge Warlords community", image: "/assets/games/grudge-brand.png", route: "https://discord.gg/FtGtmxmwkh", tags: ["Community"], category: "platform", external: true },
 ];
 
 const CATEGORIES = [
   { key: "all", label: "All" },
-  { key: "games", label: "Games" },
-  { key: "tools", label: "Tools" },
-  { key: "platform", label: "Platform" },
+  { key: "pvp", label: "⚔️ PvP" },
+  { key: "pve", label: "🛡️ PvE" },
+  { key: "grudge", label: "🔥 Grudge Universe" },
+  { key: "tools", label: "🛠️ Tools" },
+  { key: "platform", label: "🌐 Platform" },
 ];
 
 export default function FeaturedGames() {
