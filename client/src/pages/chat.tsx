@@ -246,9 +246,9 @@ export default function ChatPage() {
                     data-testid={`card-suggestion-${i + 1}`}
                     onClick={() => setMessage(s.prompt)}
                   >
-                    <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg"
-                      style={{ background: activeCharacter ? (CLASS_COLOR[activeCharacter.class?.toLowerCase()] || '#d97706') + '20' : undefined }}
-                      className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                    <div
+                      className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"
+                      style={{ background: activeCharacter ? (CLASS_COLOR[activeCharacter.class?.toLowerCase()] || '#d97706') + '20' : undefined }}>
                       <s.icon className="h-4 w-4 text-primary" />
                     </div>
                     <h3 className="font-semibold mb-1 text-sm">{s.title}</h3>
