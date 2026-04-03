@@ -9,12 +9,13 @@
  */
 
 // ── Base URLs ──
-// Character CRUD + game data routes DIRECTLY to the canonical backend
-// to ensure uniform data (cNFT, attributes, prefabs) across all Grudge games.
-const UNIFIED = 'https://api.grudge-studio.com/api';
+// Nginx at api.grudge-studio.com forwards ALL paths directly to game-api:3003.
+// game-api registers routes at root level: app.use('/characters', ...) — NO /api prefix.
+// NEVER add /api here — requests would 404.
+const UNIFIED = 'https://api.grudge-studio.com'; // root-level routing, no /api prefix
 
-// Other routes still proxy through local server
-const GAME    = '/api/grudge/game';    // → api.grudge-studio.com (legacy proxy)
+// Other routes proxy through local Express server to avoid CORS
+const GAME    = '/api/grudge/game';    // → api.grudge-studio.com via Express proxy
 const ACCOUNT = '/api/grudge/account'; // → account.grudge-studio.com
 const ID      = '/api/grudge/id';      // → id.grudge-studio.com
 const LAUNCHER = '/api/grudge/launcher'; // → launcher.grudge-studio.com
@@ -296,10 +297,14 @@ export const grudgeGameApi = {
     manualAttributes?: Record<string, number>;
     gameOrigin?: string;
   }): Promise<GrudgeCharacter | null> {
+    // Backend expects: name, race (lowercase), class (lowercase)
+    // NOT raceId/classId — map here to keep callers clean
     return apiFetch(`${UNIFIED}/characters`, {
       method: 'POST',
       body: JSON.stringify({
-        ...data,
+        name: data.name,
+        race: data.raceId.toLowerCase(),
+        class: data.classId.toLowerCase(),
         gameOrigin: data.gameOrigin || 'gdevelop-assistant',
       }),
     });
@@ -582,15 +587,17 @@ export const grudgeLauncherApi = {
 // GAME DATA API — canonical race/class/attribute definitions
 // ════════════════════════════════════════════════════════════════
 
+// game-data/* is served from ObjectStore (GitHub Pages CDN), not the VPS backend
+// The VPS game-api has no /game-data route — use the canonical ObjectStore API instead
 export const grudgeGameDataApi = {
   async all(): Promise<any> {
-    return apiFetch(`${UNIFIED}/game-data/all`);
+    return apiFetch('https://molochdagod.github.io/ObjectStore/api/v1/equipment.json');
   },
   async races(): Promise<any> {
-    return apiFetch(`${UNIFIED}/game-data/races`);
+    return apiFetch('https://molochdagod.github.io/ObjectStore/api/v1/attributes.json');
   },
   async classes(): Promise<any> {
-    return apiFetch(`${UNIFIED}/game-data/classes`);
+    return apiFetch('https://molochdagod.github.io/ObjectStore/api/v1/professions.json');
   },
 };
 
