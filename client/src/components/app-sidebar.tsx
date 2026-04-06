@@ -1,9 +1,11 @@
-import { 
+import {
   MessageSquare, BookOpen, Settings, 
   Swords, Wand2, Users, User, Wallet, Trophy, Sword, Crown,
   Joystick, Puzzle, Zap, Rocket, Box, Plane, Shield, Target, Crosshair, Map,
   Sparkles, Grid3X3, UserCog, Bug, TreeDeciduous, Car, Hexagon, Gamepad2,
-  Compass,
+  Compass, Fish, Hammer, FolderOpen, HardDrive, Globe, Warehouse, Link2,
+  CreditCard,
+  Cog, Layers, Cuboid,
 } from "lucide-react";
 import {
   Sidebar,
@@ -23,6 +25,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthData, logout } from "@/lib/auth";
+
+const engineItems = [
+  {
+    title: "Grudge Web Engine",
+    url: "/engine",
+    icon: Cog,
+    badge: "Babylon",
+  },
+  {
+    title: "Grudge Three Engine",
+    url: "/three-engine",
+    icon: Cuboid,
+    badge: "Three",
+  },
+  {
+    title: "Grudge Flat Engine",
+    url: "/flat-engine",
+    icon: Layers,
+    badge: "2D",
+  },
+];
 
 const mainMenuItems = [
   {
@@ -64,6 +87,12 @@ const mainMenuItems = [
     icon: Box,
   },
   {
+    title: "Card Forge",
+    url: "/card-forge",
+    icon: CreditCard,
+    badge: "TCG+NFT",
+  },
+  {
     title: "Skill Tree Editor",
     url: "/skill-tree",
     icon: TreeDeciduous,
@@ -75,12 +104,69 @@ const mainMenuItems = [
   },
 ];
 
+const warlordSuiteItems = [
+  {
+    title: "Skill Tree",
+    url: "/warlord-suite/skill-tree",
+    icon: TreeDeciduous,
+    badge: "WCS",
+  },
+  {
+    title: "Arsenal",
+    url: "/warlord-suite/arsenal",
+    icon: Shield,
+    badge: "Items",
+  },
+  {
+    title: "Crafting",
+    url: "/warlord-suite/crafting",
+    icon: Hammer,
+    badge: "WCS",
+  },
+  {
+    title: "Weapon Skills",
+    url: "/warlord-suite/weapon-skills",
+    icon: Sword,
+    badge: "WCS",
+  },
+  {
+    title: "Character Builder",
+    url: "/warlord-suite/character-builder",
+    icon: UserCog,
+    badge: "WCS",
+  },
+];
+
 const featured3DGames = [
+  {
+    title: "Betta Warlords",
+    url: "/betta-warlords",
+    icon: Fish,
+    badge: "RPG",
+  },
+  {
+    title: "GrudgeBox",
+    url: "/grudge-box",
+    icon: Swords,
+    badge: "Fight",
+  },
+  {
+    title: "Crypt Crawlers",
+    url: "/crypt-crawlers",
+    icon: Compass,
+    badge: "Crawl",
+  },
   {
     title: "Overdrive",
     url: "/grudge-drive",
     icon: Car,
-    badge: "Racing",
+    badge: "2D",
+  },
+  {
+    title: "Grudge Drift",
+    url: "/drift",
+    icon: Car,
+    badge: "3D",
   },
   {
     title: "Crown Clash",
@@ -113,7 +199,7 @@ const featured3DGames = [
     badge: "FPS",
   },
   {
-    title: "Swarm RTS",
+    title: "Warlords RTS",
     url: "/swarm-rts",
     icon: Hexagon,
     badge: "RTS",
@@ -135,6 +221,23 @@ const featured3DGames = [
     url: "/gruda-wars",
     icon: Sword,
     badge: "RPG",
+  },
+  {
+    title: "Nexus Nemesis",
+    url: "/nexus-nemesis",
+    icon: Crown,
+    badge: "TCG",
+  },
+  {
+    title: "Galactic Conquest",
+    url: "/swarm-galactic",
+    icon: Globe,
+    badge: "RTS",
+  },
+  {
+    title: "All Games",
+    url: "/games",
+    icon: Gamepad2,
   },
 ];
 
@@ -166,6 +269,25 @@ const arcadeGames = [
   },
 ];
 
+const accountEconomyItems = [
+  {
+    title: "War Chest",
+    url: "/wallet",
+    icon: Wallet,
+    badge: "GBUX",
+  },
+  {
+    title: "Achievements",
+    url: "/achievements",
+    icon: Trophy,
+  },
+  {
+    title: "Connections",
+    url: "/connections",
+    icon: Link2,
+  },
+];
+
 const gameSystemItems = [
   {
     title: "Game Lobbies",
@@ -178,14 +300,14 @@ const gameSystemItems = [
     icon: Sword,
   },
   {
-    title: "Wallet",
-    url: "/wallet",
-    icon: Wallet,
+    title: "Projects",
+    url: "/projects",
+    icon: FolderOpen,
   },
   {
-    title: "Achievements",
-    url: "/achievements",
-    icon: Trophy,
+    title: "Admin Storage",
+    url: "/admin-storage",
+    icon: HardDrive,
   },
 ];
 
@@ -198,10 +320,13 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-2">
         <Link href="/" className="block hover-elevate rounded-md overflow-hidden">
-          <div className="relative w-full rounded-md overflow-hidden bg-gradient-to-r from-purple-900 to-blue-900 p-4">
-            <div className="text-xl font-bold text-white text-center" data-testid="img-logo">
-              Grudge<span className="text-purple-300">Develop</span>
-            </div>
+          <div className="relative w-full rounded-md overflow-hidden bg-black border border-orange-600/30 p-3 flex items-center justify-center">
+            <img
+              src="/assets/branding/grudge-logo.svg"
+              alt="GRUDGE"
+              className="h-10 w-auto"
+              data-testid="img-logo"
+            />
           </div>
         </Link>
       </SidebarHeader>
@@ -221,7 +346,65 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span className="flex-1">{item.title}</span>
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-red-500/20 text-red-400 border-0">
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-yellow-500/20 text-yellow-400 border-0">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-1">
+            <Cog className="h-3 w-3 text-red-400" />
+            Engines
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {engineItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    data-active={location === item.url}
+                    data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.title}</span>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-red-500/20 text-red-400 border-0">
+                        {item.badge}
+                      </Badge>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-1">
+            <Warehouse className="h-3 w-3 text-cyan-500" />
+            Warlord Suite
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {warlordSuiteItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    data-active={location === item.url || location.startsWith(item.url)}
+                    data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.title}</span>
+                      {item.badge && (
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-cyan-500/20 text-cyan-400 border-0">
                           {item.badge}
                         </Badge>
                       )}
@@ -251,7 +434,7 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span className="flex-1">{item.title}</span>
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-blue-500/20 text-blue-400 border-0">
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-400 border-0">
                           {item.badge}
                         </Badge>
                       )}
@@ -280,6 +463,36 @@ export function AppSidebar() {
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-1">
+            <Wallet className="h-3 w-3 text-amber-500" />
+            Account & Economy
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {accountEconomyItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    data-active={location === item.url}
+                    data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.title}</span>
+                      {item.badge && (
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-400 border-0">
+                          {item.badge}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -1,14 +1,18 @@
 /**
  * Grudge JWT Verification Middleware
- * Hub-and-spoke model: all tokens originate from auth-gateway-flax.vercel.app
- * This middleware verifies them locally (fast) or via auth-gateway (fallback).
+ * Direct-DB mode: all tokens are signed locally by grudgeAuth.ts.
+ * Verified locally with SESSION_SECRET — no external gateway dependency.
  */
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const AUTH_GATEWAY = "https://auth-gateway-flax.vercel.app";
-const SESSION_SECRET = process.env.SESSION_SECRET || "grudge-warlords-secret-key";
+const SESSION_SECRET = process.env.SESSION_SECRET || "";
+const GRUDGE_BACKEND_URL = process.env.GRUDGE_BACKEND_URL || "https://id.grudge-studio.com";
+
+if (!process.env.SESSION_SECRET) {
+  console.warn("⚠️  SESSION_SECRET not set — JWT verification will fail for all requests");
+}
 
 /** Shape of the JWT payload issued by auth-gateway */
 export interface GrudgeUser {
@@ -40,8 +44,9 @@ function extractToken(req: Request): string | null {
   return null;
 }
 
-/** Try local JWT verification first (no network round-trip). */
-function verifyLocally(token: string): GrudgeUser | null {
+/** Verify JWT locally using SESSION_SECRET. */
+function verifyToken(token: string): GrudgeUser | null {
+  if (!SESSION_SECRET) return null;
   try {
     const decoded = jwt.verify(token, SESSION_SECRET) as Record<string, any>;
     if (!decoded.grudgeId) return null;
@@ -49,40 +54,46 @@ function verifyLocally(token: string): GrudgeUser | null {
       grudgeId: decoded.grudgeId,
       username: decoded.username || "Player",
       userId: decoded.userId || decoded.sub || decoded.grudgeId,
+      role: decoded.role,
+      isPremium: decoded.isPremium,
+      isGuest: decoded.isGuest,
     };
   } catch {
     return null;
   }
 }
 
-/** Fallback: call auth-gateway /api/verify to validate the token remotely. */
-async function verifyRemotely(token: string): Promise<GrudgeUser | null> {
+/**
+ * Verify token against the grudge-backend grudge-id service.
+ * Used as a fallback when local SESSION_SECRET verification fails
+ * (e.g. token was issued by the grudge-backend with a different JWT_SECRET).
+ */
+async function verifyTokenRemote(token: string): Promise<GrudgeUser | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const res = await fetch(`${AUTH_GATEWAY}/api/verify`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+    const res = await fetch(`${GRUDGE_BACKEND_URL}/auth/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
 
     if (!res.ok) return null;
 
-    const data = await res.json() as Record<string, any>;
-    if (!data.success || !data.grudgeId) return null;
+    const data = await res.json();
+    if (!data.valid || !data.payload) return null;
 
+    const p = data.payload;
     return {
-      grudgeId: data.grudgeId,
-      username: data.username || data.user?.username || "Player",
-      userId: data.user?.id || data.grudgeId,
-      role: data.user?.role,
-      isPremium: data.user?.isPremium,
-      isGuest: data.user?.isGuest,
+      grudgeId: p.grudge_id || p.grudgeId,
+      username: p.username || "Player",
+      userId: p.grudge_id || p.grudgeId,
+      role: p.role,
+      isPremium: p.isPremium,
+      isGuest: p.isGuest,
     };
   } catch {
     return null;
@@ -94,6 +105,7 @@ async function verifyRemotely(token: string): Promise<GrudgeUser | null> {
 /**
  * Require a valid Grudge JWT. Returns 401 if missing/invalid.
  * Attaches `req.grudgeUser` on success.
+ * Falls back to grudge-backend remote verification if local verify fails.
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = extractToken(req);
@@ -101,12 +113,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  // Fast path: local verify
-  let user = verifyLocally(token);
+  // Try local verification first (fast path)
+  let user = verifyToken(token);
 
-  // Slow path: remote verify (handles key rotation, different secrets, etc.)
+  // Fallback: verify against grudge-backend grudge-id service
   if (!user) {
-    user = await verifyRemotely(token);
+    user = await verifyTokenRemote(token);
   }
 
   if (!user) {
@@ -120,13 +132,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 /**
  * Optional auth — attaches `req.grudgeUser` if a valid token is present,
  * but continues even if not. Use for endpoints that work with or without auth.
+ * Falls back to grudge-backend remote verification if local verify fails.
  */
 export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const token = extractToken(req);
   if (token) {
-    let user = verifyLocally(token);
+    let user = verifyToken(token);
     if (!user) {
-      user = await verifyRemotely(token);
+      user = await verifyTokenRemote(token);
     }
     if (user) {
       req.grudgeUser = user;

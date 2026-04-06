@@ -1,0 +1,20 @@
+{
+  "slug": "mmo",
+  "title": "MMO World",
+  "version": "0.2.0",
+  "description": "2D MMO RPG with souls-like combat, sprite-based characters, crafting, and AI-driven enemies. Features biome zones, equipment system, and Grudge Studio attribute integration.",
+  "routes": [{ "path": "/mmo", "entry": "tabs/mmo/index.tsx" }],
+  "assets": {
+    "sprites": "assets/mmo/sprites/",
+    "models": "assets/mmo/models/",
+    "effects": "assets/mmo/effects/"
+  },
+  "features": [
+    "sprite-loader",
+    "character-loader",
+    "object-storage",
+    "attack-indicators",
+    "crafting",
+    "equipment"
+  ]
+}
