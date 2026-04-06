@@ -3,7 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Grudge Warlords - Crafting & Progression System" />
+    <meta name="description" content="GRUDGE Warlords - AI-Powered Game Development Assistant & Crafting Platform" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GRUDGE" />
+    <meta name="theme-color" content="#d4af37" />
+    <meta name="application-name" content="GDevelop Assistant" />
+    <meta name="msapplication-TileColor" content="#0a0a0f" />
+
+    <meta property="og:title" content="GDevelop Assistant - Grudge Warlords" />
+    <meta property="og:description" content="AI-powered game development assistant with crafting, progression, sprite generation, and multiplayer tools." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://gdevelop-assistant-grudgenexus.vercel.app" />
+    <meta property="og:site_name" content="Grudge Studio" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@grudgewarlords" />
+    <meta name="twitter:title" content="GDevelop Assistant - Grudge Warlords" />
+
     <title>GDevelop Assistant - Grudge Warlords</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -11,10 +28,28 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=IM+Fell+English+SC&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Spectral+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://grudge-platform.vercel.app/grudge-auth-modal.css">
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Vite Entry Point -->
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Puter SDK -->
+    <script src="https://js.puter.com/v2/"></script>
+
+    <!-- Grudge Auth Modal (unified across all Grudge apps) -->
+    <script src="https://grudge-platform.vercel.app/grudge-auth-modal.js"></script>
+
+    <!-- App Config -->
+    <script>
+      window.GRUDGE_APP_CONFIG = {
+        appId: 'GDEVELOP_ASSISTANT',
+        version: '1.1.0',
+        buildDate: new Date().toISOString()
+      };
+    </script>
   </body>
 </html>

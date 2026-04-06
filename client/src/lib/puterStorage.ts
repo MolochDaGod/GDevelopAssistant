@@ -7,6 +7,12 @@ declare global {
         signOut: () => Promise<void>;
         getUser: () => Promise<{ username: string; uuid: string; email?: string }>;
       };
+      ai: {
+        chat: (prompt: string, options?: { model?: string; stream?: boolean }) => Promise<any>;
+        txt2img: (prompt: string, options?: { model?: string }) => Promise<HTMLImageElement>;
+        txt2speech: (text: string, options?: { voice?: string }) => Promise<HTMLAudioElement>;
+        img2txt: (imageUrl: string) => Promise<string>;
+      };
       fs: {
         write: (path: string, content: Blob | string | File, options?: { dedupeName?: boolean; createMissingParents?: boolean }) => Promise<{ name: string; path: string }>;
         read: (path: string) => Promise<Blob>;
@@ -25,6 +31,16 @@ declare global {
         list: (pattern?: string, returnValues?: boolean) => Promise<string[]>;
         flush: () => Promise<void>;
       };
+      ui: {
+        showOpenFilePicker: () => Promise<any>;
+        showSaveFilePicker: (content: string | Blob, filename: string) => Promise<any>;
+      };
+      hosting?: {
+        create: (subdomain: string, dirPath: string) => Promise<any>;
+        list: () => Promise<any[]>;
+        delete: (subdomain: string) => Promise<void>;
+      };
+      randName?: () => string;
     };
   }
 }
@@ -235,6 +251,61 @@ class PuterStorageService {
     if (!this.isAvailable) return [];
     const keys = await this.puter.kv.list('project:*');
     return keys.map(key => key.replace('project:', ''));
+  }
+
+  /**
+   * Upload a game asset to Puter FS with automatic category routing.
+   * After upload, the caller should POST metadata to /api/assets (Neon)
+   * with the returned path as sourceUrl.
+   *
+   * Neon remains the source of truth for asset metadata.
+   */
+  async uploadAssetToCloud(
+    file: File,
+    category?: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<{ name: string; path: string; category: string; size: number }> {
+    if (!this.isAvailable) throw new Error('Puter SDK not available');
+
+    const resolvedCategory = category || this.detectCategory(file.name);
+    const uuid = crypto.randomUUID().slice(0, 8);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `${this.basePath}/assets/${resolvedCategory}/${uuid}_${safeName}`;
+
+    onProgress?.(10);
+
+    const result = await this.puter.fs.write(storagePath, file, {
+      createMissingParents: true,
+      dedupeName: true,
+    });
+
+    onProgress?.(100);
+
+    return {
+      name: result.name,
+      path: result.path,
+      category: resolvedCategory,
+      size: file.size,
+    };
+  }
+
+  /** Detect asset category from file extension */
+  private detectCategory(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const categoryMap: Record<string, string> = {
+      // 3D models
+      glb: 'models', gltf: 'models', fbx: 'models', obj: 'models',
+      // Textures / images
+      png: 'textures', jpg: 'textures', jpeg: 'textures',
+      webp: 'textures', svg: 'textures', hdr: 'textures',
+      // Audio
+      mp3: 'audio', ogg: 'audio', wav: 'audio', flac: 'audio',
+      // Animations
+      anim: 'animations', bvh: 'animations',
+      // Sprites
+      atlas: 'sprites', json: 'sprites',
+    };
+    return categoryMap[ext] || 'misc';
   }
 }
 

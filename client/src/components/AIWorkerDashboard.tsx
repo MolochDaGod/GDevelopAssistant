@@ -94,7 +94,7 @@ export function AIWorkerDashboard() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+          className="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-amber-500 to-yellow-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
           aria-label="Open AI Assistant"
         >
           <svg
@@ -121,7 +121,7 @@ export function AIWorkerDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-amber-500 to-yellow-600 bg-clip-text text-transparent">
                     AI Developer Assistant
                   </span>
                   {health && (
@@ -182,14 +182,14 @@ export function AIWorkerDashboard() {
                       <div
                         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                           msg.role === 'user'
-                            ? 'bg-blue-500 text-white'
+                            ? 'bg-amber-600 text-white'
                             : 'bg-muted text-foreground'
                         }`}
                       >
                         <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                         <p
                           className={`text-xs mt-1 ${
-                            msg.role === 'user' ? 'text-blue-100' : 'text-muted-foreground'
+                            msg.role === 'user' ? 'text-amber-100' : 'text-muted-foreground'
                           }`}
                         >
                           {new Date(msg.timestamp).toLocaleTimeString()}
@@ -226,7 +226,7 @@ export function AIWorkerDashboard() {
                   onClick={sendMessage}
                   disabled={!input.trim() || isLoading}
                   size="sm"
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700"
                 >
                   Send
                 </Button>

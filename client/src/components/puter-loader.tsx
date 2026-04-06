@@ -42,11 +42,11 @@ export function PuterLoader({ isLoading, message = 'Loading...', minDisplayTime 
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
       data-testid="puter-loader"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-black to-blue-900/30" />
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/30 via-black to-yellow-900/30" />
       
       <div className="relative z-10 flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
         </div>
         
         <div className="text-center">
