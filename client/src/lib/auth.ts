@@ -215,8 +215,25 @@ export function captureAuthCallback(): boolean {
     }
   }
 
-  // Fallback: query params (legacy)
+  // SSO from grudgewarlords.com / other Grudge apps (sso_token param)
   const params = new URLSearchParams(window.location.search);
+  const ssoToken = params.get('sso_token');
+  if (ssoToken) {
+    storeAuth({
+      token: ssoToken,
+      grudgeId: params.get('grudge_id') || params.get('grudgeId') || undefined,
+      userId: params.get('grudge_user_id') || params.get('userId') || undefined,
+      username: params.get('grudge_username') || params.get('username') || undefined,
+    });
+    const cleanUrl = new URL(window.location.href);
+    ['sso_token', 'grudge_id', 'grudge_user_id', 'grudge_username', 'grudgeId', 'userId', 'username'].forEach(
+      (k) => cleanUrl.searchParams.delete(k),
+    );
+    window.history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search);
+    return true;
+  }
+
+  // Fallback: query params (legacy token= format)
   const token = params.get('token');
   if (!token) return false;
 
