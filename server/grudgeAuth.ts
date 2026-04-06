@@ -1,119 +1,203 @@
 /**
- * Grudge Auth Routes (GGE)
- * All authentication is delegated to the auth-gateway (source of truth).
- * This file proxies login/register/guest/puter requests and provides
- * JWT-verified /api/auth/* endpoints for the GGE client.
+ * Grudge Auth Routes — Proxy to Grudge ID Service
+ *
+ * Auth lives on id.grudge-studio.com (grudge-id, port 3001).
+ * Game data lives on api.grudge-studio.com (game-api, port 3003).
+ *
+ * OAuth flows: The proxy initiates OAuth, receives the callback,
+ * exchanges the code via grudge-id, and redirects back to /auth with token.
  */
 
-import type { Express } from "express";
-import { requireAuth } from "./middleware/grudgeJwt";
+import type { Express, Request, Response } from "express";
 
-const AUTH_GATEWAY = process.env.AUTH_GATEWAY_URL || "https://auth-gateway-flax.vercel.app";
+// Auth service (grudge-id) — handles login, register, JWT, OAuth
+const AUTH_URL = process.env.GRUDGE_AUTH_URL || "https://id.grudge-studio.com";
 
-// ── Proxy helper ──
-
-async function gatewayProxy(
-  endpoint: string,
-  method: string,
-  body?: Record<string, any>,
-  headers?: Record<string, string>,
-): Promise<{ ok: boolean; status: number; data: any }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
-
+async function proxyAuth(
+  backendPath: string,
+  req: Request,
+  res: Response,
+  { method = "POST", forwardBody = true } = {},
+) {
   try {
-    const res = await fetch(`${AUTH_GATEWAY}/api/${endpoint}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(headers || {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (req.headers.authorization) {
+      headers["Authorization"] = req.headers.authorization as string;
+    }
+
+    const fetchOpts: RequestInit = { method, headers };
+    if (forwardBody && method !== "GET") {
+      fetchOpts.body = JSON.stringify(req.body || {});
+    }
+
+    const upstream = await fetch(`${AUTH_URL}${backendPath}`, fetchOpts);
+    const contentType = upstream.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const data = await upstream.json();
+      return res.status(upstream.status).json(data);
+    } else {
+      const text = await upstream.text();
+      return res.status(upstream.status).send(text);
+    }
   } catch (err: any) {
-    clearTimeout(timeout);
-    return {
-      ok: false,
-      status: 503,
-      data: { error: "Auth gateway unreachable", details: err.message },
-    };
+    console.error(`[Auth Proxy ${backendPath}] error:`, err.message);
+    res.status(502).json({
+      error: "Auth service unavailable",
+      service: "GDevelop Assistant",
+      hint: "Grudge ID at " + AUTH_URL + " may be offline",
+    });
   }
 }
 
-// ── Route registration ──
+/** Build OAuth callback redirect with token params */
+function buildAuthRedirect(data: any, provider: string, returnUrl: string): string {
+  // Safety: if returnUrl is a full URL (e.g. https://....), extract just the path+query
+  // so the client-side wouter navigate() works correctly.
+  let cleanReturn = returnUrl || "/";
+  try {
+    const parsed = new URL(cleanReturn);
+    // Strip origin if it's any of our Vercel domains or localhost
+    const isOurDomain = parsed.hostname === "localhost"
+      || parsed.hostname.endsWith(".vercel.app")
+      || parsed.hostname.endsWith(".grudge-studio.com")
+      || parsed.hostname.endsWith(".grudgestudio.com");
+    if (isOurDomain) {
+      cleanReturn = parsed.pathname + parsed.search;
+    }
+  } catch {
+    // Not a full URL — already a path, keep as-is
+  }
+
+  const params = new URLSearchParams({
+    token: data.token,
+    grudgeId: data.grudgeId || "",
+    userId: String(data.userId || ""),
+    username: data.username || "",
+    displayName: data.displayName || "",
+    provider,
+    isNew: data.isNewUser ? "true" : "false",
+  });
+  return `/auth?${params}&return=${encodeURIComponent(cleanReturn)}`;
+}
 
 export function setupGrudgeAuth(app: Express) {
-  // ─── Proxy login to auth-gateway ───
-  app.post("/api/login", async (req, res) => {
-    const result = await gatewayProxy("login", "POST", req.body);
-    res.status(result.status).json(result.data);
-  });
+  // GET /api/login & /api/register → redirect to in-app auth page
+  app.get("/api/login", (_req, res) => res.redirect(302, "/auth"));
+  app.get("/api/register", (_req, res) => res.redirect(302, "/auth"));
 
-  // ─── Proxy register to auth-gateway ───
-  app.post("/api/register", async (req, res) => {
-    const result = await gatewayProxy("register", "POST", req.body);
-    res.status(result.status).json(result.data);
-  });
+  // ── Direct auth proxies → grudge-id /auth/* ──
+  app.post("/api/login", (req, res) => proxyAuth("/auth/login", req, res));
+  app.post("/api/register", (req, res) => proxyAuth("/auth/register", req, res));
+  app.post("/api/guest", (req, res) => proxyAuth("/auth/guest", req, res));
 
-  // ─── Proxy guest login to auth-gateway ───
-  app.post("/api/guest", async (req, res) => {
-    const result = await gatewayProxy("guest", "POST", req.body);
-    res.status(result.status).json(result.data);
-  });
+  app.get("/api/auth/verify", (req, res) => proxyAuth("/auth/verify", req, res, { method: "GET", forwardBody: false }));
+  app.get("/api/auth/user", (req, res) => proxyAuth("/auth/user", req, res, { method: "GET", forwardBody: false }));
+  app.get("/api/auth/me", (req, res) => proxyAuth("/auth/user", req, res, { method: "GET", forwardBody: false }));
 
-  // ─── Puter sign-in → auth-gateway /api/puter → JWT ───
-  // Client calls this after puter.auth.signIn() to get a Grudge JWT
-  app.post("/api/auth/puter", async (req, res) => {
-    const { puterUuid, puterUsername } = req.body;
-    if (!puterUuid) {
-      return res.status(400).json({ error: "puterUuid is required" });
+  app.post("/api/auth/puter", (req, res) => proxyAuth("/auth/puter", req, res));
+  app.post("/api/auth/link-puter", (req, res) => proxyAuth("/auth/puter-link", req, res));
+  app.post("/api/auth/wallet", (req, res) => proxyAuth("/auth/wallet", req, res));
+  app.post("/api/auth/logout", (req, res) => proxyAuth("/auth/logout", req, res));
+
+  // ── Phone auth ──
+  app.post("/api/auth/phone", async (req: Request, res: Response) => {
+    const { action, phone, code } = req.body;
+    if (action === "send") return proxyAuth("/auth/phone-send", req, res);
+    if (action === "verify" && code) {
+      req.body = { phone, code };
+      return proxyAuth("/auth/phone-verify", req, res);
     }
-    const result = await gatewayProxy("puter", "POST", { puterUuid, puterUsername });
-    res.status(result.status).json(result.data);
+    res.status(400).json({ error: "Invalid action. Use 'send' or 'verify'." });
   });
 
-  // ─── Verify token (proxy to auth-gateway /api/verify) ───
-  app.get("/api/auth/verify", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: "No token provided" });
-    }
-    const result = await gatewayProxy("verify", "GET", undefined, {
-      Authorization: authHeader,
+  // ── Discord OAuth ──
+  app.get("/api/auth/discord", (req: Request, res: Response) => {
+    const state = (req.query.state as string) || "/";
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ error: "Discord OAuth not configured" });
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/discord/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId, redirect_uri: redirectUri,
+      response_type: "code", scope: "identify email", state,
     });
-    res.status(result.status).json(result.data);
+    res.json({ url: `https://discord.com/api/oauth2/authorize?${params}` });
   });
 
-  // ─── Get current user (JWT-verified locally) ───
-  app.get("/api/auth/user", requireAuth, (req, res) => {
-    const user = req.grudgeUser!;
-    res.json({
-      id: user.userId,
-      grudgeId: user.grudgeId,
-      username: user.username,
-      role: user.role || "user",
-      isPremium: user.isPremium || false,
+  app.get("/api/auth/discord/callback", async (req: Request, res: Response) => {
+    const { code, state } = req.query;
+    const returnUrl = decodeURIComponent((state as string) || "/");
+    if (!code) return res.redirect(`/auth?error=discord_token_failed&return=${encodeURIComponent(returnUrl)}`);
+    try {
+      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/discord/callback`;
+      const r = await fetch(`${AUTH_URL}/auth/discord/exchange`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      });
+      const data = await r.json() as any;
+      if (data.success && data.token) return res.redirect(buildAuthRedirect(data, "discord", returnUrl));
+      res.redirect(`/auth?error=discord_auth_failed&return=${encodeURIComponent(returnUrl)}`);
+    } catch { res.redirect(`/auth?error=discord_auth_failed&return=${encodeURIComponent(returnUrl)}`); }
+  });
+
+  // ── Google OAuth ──
+  app.get("/api/auth/google", (req: Request, res: Response) => {
+    const state = (req.query.state as string) || "/";
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ error: "Google OAuth not configured" });
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId, redirect_uri: redirectUri,
+      response_type: "code", scope: "openid email profile",
+      state, access_type: "offline", prompt: "select_account",
     });
+    res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
   });
 
-  // ─── Full profile (enriched from auth-gateway /api/verify) ───
-  app.get("/api/auth/me", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    const result = await gatewayProxy("verify", "GET", undefined, {
-      Authorization: authHeader,
+  app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
+    const { code, state } = req.query;
+    const returnUrl = decodeURIComponent((state as string) || "/");
+    if (!code) return res.redirect(`/auth?error=google_token_failed&return=${encodeURIComponent(returnUrl)}`);
+    try {
+      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+      const r = await fetch(`${AUTH_URL}/auth/google/exchange`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      });
+      const data = await r.json() as any;
+      if (data.success && data.token) return res.redirect(buildAuthRedirect(data, "google", returnUrl));
+      res.redirect(`/auth?error=google_auth_failed&return=${encodeURIComponent(returnUrl)}`);
+    } catch { res.redirect(`/auth?error=google_auth_failed&return=${encodeURIComponent(returnUrl)}`); }
+  });
+
+  // ── GitHub OAuth ──
+  app.get("/api/auth/github", (req: Request, res: Response) => {
+    const state = (req.query.state as string) || "/";
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ error: "GitHub OAuth not configured" });
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId, redirect_uri: redirectUri,
+      scope: "read:user user:email", state,
     });
-    if (!result.ok) {
-      return res.status(result.status).json(result.data);
-    }
-    res.json(result.data);
+    res.json({ url: `https://github.com/login/oauth/authorize?${params}` });
   });
 
-  console.log("✅ Grudge Auth routes registered (gateway proxy mode)");
+  app.get("/api/auth/github/callback", async (req: Request, res: Response) => {
+    const { code, state } = req.query;
+    const returnUrl = decodeURIComponent((state as string) || "/");
+    if (!code) return res.redirect(`/auth?error=github_token_failed&return=${encodeURIComponent(returnUrl)}`);
+    try {
+      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/github/callback`;
+      const r = await fetch(`${AUTH_URL}/auth/github/exchange`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      });
+      const data = await r.json() as any;
+      if (data.success && data.token) return res.redirect(buildAuthRedirect(data, "github", returnUrl));
+      res.redirect(`/auth?error=github_auth_failed&return=${encodeURIComponent(returnUrl)}`);
+    } catch { res.redirect(`/auth?error=github_auth_failed&return=${encodeURIComponent(returnUrl)}`); }
+  });
+
+  console.log(`✅ Grudge Auth proxy registered → ${AUTH_URL}`);
 }

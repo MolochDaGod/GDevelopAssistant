@@ -1,5 +1,7 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
+import { useCachedMutation } from "@/hooks/useCachedMutation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { grudgeAccountApi, grudgeIdApi } from "@/lib/grudgeBackendApi";
 import { 
   User, 
   Settings, 
@@ -29,7 +32,10 @@ import {
   Sparkles,
   Eye,
   Keyboard,
-  LogIn
+  LogIn,
+  Laptop,
+  Trash2,
+  Crown
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { UserSettings } from "@shared/schema";
@@ -89,11 +95,29 @@ export default function SettingsPage() {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(defaultNotificationSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading: settingsLoading } = useQuery<UserSettings>({
-    queryKey: ["/api/settings"],
+  // Grudge backend sessions & identity
+  const { data: grudgeSessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ['grudge', 'sessions'],
+    queryFn: () => grudgeAccountApi.listSessions(),
     enabled: isAuthenticated,
-    retry: false,
   });
+
+  const { data: grudgeMe } = useQuery({
+    queryKey: ['grudge', 'identity'],
+    queryFn: () => grudgeIdApi.getMe(),
+    enabled: isAuthenticated,
+  });
+
+  const revokeSession = useMutation({
+    mutationFn: (computerId: string) => grudgeAccountApi.revokeSession(computerId),
+    onSuccess: () => { refetchSessions(); toast({ title: 'Session revoked' }); },
+    onError: () => toast({ variant: 'destructive', title: 'Error', description: 'Could not revoke session' }),
+  });
+
+  const { data: settings, isLoading: settingsLoading } = useCachedQuery<UserSettings>(
+    ["/api/settings"],
+    { ttlMs: 300_000, enabled: isAuthenticated },
+  );
 
   useEffect(() => {
     if (settings) {
@@ -109,13 +133,14 @@ export default function SettingsPage() {
     }
   }, [settings]);
 
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (data: Partial<UserSettings>) => {
+  const saveSettingsMutation = useCachedMutation<UserSettings, Partial<UserSettings>>({
+    mutationFn: async (data) => {
       const response = await apiRequest("PUT", "/api/settings", data);
       return response.json();
     },
+    cacheKey: ["/api/settings"],
+    ttlMs: 300_000,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       setHasChanges(false);
       toast({
         title: "Settings Saved",
@@ -163,7 +188,7 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">Sign in to access your account settings and preferences</p>
         </div>
         <Button asChild data-testid="button-login">
-          <a href="/api/login">
+          <a href="/auth">
             <LogIn className="mr-2 h-4 w-4" />
             Sign In
           </a>
@@ -284,12 +309,66 @@ export default function SettingsPage() {
                         Member Since
                       </Label>
                       <div className="font-medium" data-testid="text-created-at">
-                        {formatDate(user?.createdAt)}
+                        {user?.createdAt ? formatDate(new Date(user.createdAt)) : 'Unknown'}
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Grudge Identity */}
+              {grudgeMe && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5" />
+                      Grudge Identity
+                    </CardTitle>
+                    <CardDescription>Your Grudge Warlords account</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><Label className="text-muted-foreground">Grudge ID</Label><p className="font-mono">{grudgeMe.grudge_id || grudgeMe.grudgeId || '—'}</p></div>
+                      <div><Label className="text-muted-foreground">Username</Label><p>{grudgeMe.username || '—'}</p></div>
+                      {grudgeMe.faction && <div><Label className="text-muted-foreground">Faction</Label><p>{grudgeMe.faction}</p></div>}
+                      {grudgeMe.race && <div><Label className="text-muted-foreground">Race / Class</Label><p>{grudgeMe.race} {grudgeMe.class}</p></div>}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Grudge Sessions */}
+              {grudgeSessions.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Laptop className="h-5 w-5" />
+                      Grudge Sessions ({grudgeSessions.length})
+                    </CardTitle>
+                    <CardDescription>Active sessions across devices</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {grudgeSessions.map((s: any) => (
+                        <div key={s.computer_id || s.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                          <div>
+                            <p className="text-sm font-medium">{s.label || s.computer_id || 'Unknown device'}</p>
+                            <p className="text-xs text-muted-foreground">{s.last_seen ? new Date(s.last_seen).toLocaleString() : 'Active'}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => revokeSession.mutate(s.computer_id)}
+                            disabled={revokeSession.isPending}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> Revoke
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="border-red-600/20">
                 <CardHeader>

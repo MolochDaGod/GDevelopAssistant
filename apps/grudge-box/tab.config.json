@@ -1,0 +1,15 @@
+{
+  "slug": "grudge-box",
+  "title": "GrudgeBox",
+  "version": "1.0.0",
+  "description": "GKO Boxing — arcade fighting game from the Grudge Warlords universe.",
+  "routes": [{ "path": "/grudge-box", "entry": "tabs/grudge-box/index.tsx" }],
+  "assets": {
+    "sprites": "assets/grudge-box/sprites/"
+  },
+  "features": [
+    "sprite-loader",
+    "combat"
+  ],
+  "externalUrl": "https://grudge-wars.vercel.app/gko-boxing"
+}

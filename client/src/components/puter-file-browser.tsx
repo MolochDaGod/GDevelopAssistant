@@ -48,7 +48,7 @@ function getFileIcon(name: string, isDir: boolean) {
     case 'gltf':
     case 'fbx':
     case 'obj':
-      return <Box className="w-5 h-5 text-purple-500" />;
+      return <Box className="w-5 h-5 text-amber-500" />;
     case 'mp3':
     case 'wav':
     case 'ogg':

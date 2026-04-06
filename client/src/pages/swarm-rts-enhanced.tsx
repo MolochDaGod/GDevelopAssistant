@@ -1189,7 +1189,7 @@ export default function SwarmRTSEnhanced() {
         
         state.selectedUnits.clear();
         if (foundUnit) {
-          state.selectedUnits.add(foundUnit.id);
+          state.selectedUnits.add((foundUnit as any).id);
         }
       } else {
         // Selection box
@@ -1262,8 +1262,8 @@ export default function SwarmRTSEnhanced() {
       )}
 
       {apiMaps.length > 0 && (
-        <Card className="p-4 mb-4 border-blue-500/50 bg-blue-950/30">
-          <p className="text-blue-200">Loaded {apiMaps.length} maps from server</p>
+        <Card className="p-4 mb-4 border-amber-500/50 bg-amber-950/30">
+          <p className="text-amber-200">Loaded {apiMaps.length} maps from server</p>
         </Card>
       )}
 

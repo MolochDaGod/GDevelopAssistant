@@ -2,107 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GRUDGE BRAWL THEME - Dark aggressive gaming style */
-/* Based on black/dark gray background with crimson red and white accents */
+/* GRUDGE STUDIO THEME — Aligned with grudge-platform.vercel.app */
+/* Navy-blue base (225°), gold accents (#d4af37), medieval fonts */
 
 :root {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(212,175,55, .12);
+  --badge-outline: rgba(212,175,55, .06);
 
   /* Automatic computation of border around primary / danger buttons */
   --opaque-button-border-intensity: 8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(212,175,55, .04);
+  --elevate-2: rgba(212,175,55, .09);
 
-  /* Dark charcoal background */
-  --background: 0 0% 0%;
+  /* Navy-blue base — matches Grudge Platform --bg0 */
+  --background: 225 30% 8%;
 
-  /* Off-white text */
-  --foreground: 200 6.6667% 91.1765%;
+  /* Warm parchment text — matches --text */
+  --foreground: 45 30% 90%;
 
-  /* Dark borders with slight red tint */
-  --border: 210 5.2632% 14.9020%;
+  /* Gold-tinted borders — matches Grudge Platform --border */
+  --border: 43 60% 30%;
 
-  /* Stone gray cards */
-  --card: 228 9.8039% 10%;
+  /* Dark navy cards — matches --card */
+  --card: 225 25% 12%;
 
-  --card-foreground: 0 0% 85.0980%;
+  --card-foreground: 45 30% 85%;
 
-  --card-border: 0 5% 22%;
+  --card-border: 43 50% 25%;
 
-  /* Dark sidebar */
-  --sidebar: 228 9.8039% 10%;
+  /* Sidebar — matches --bg1 */
+  --sidebar: 225 28% 10%;
 
-  --sidebar-foreground: 0 0% 85.0980%;
+  --sidebar-foreground: 45 30% 85%;
 
-  --sidebar-border: 205.0000 25.0000% 90.5882%;
+  --sidebar-border: 43 50% 25%;
 
-  /* Crimson red primary */
-  --sidebar-primary: 203.8863 88.2845% 53.1373%;
+  /* Gold primary — matches --gold */
+  --sidebar-primary: 43 85% 55%;
 
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 0 0% 0%;
 
-  --sidebar-accent: 211.5789 51.3514% 92.7451%;
+  --sidebar-accent: 43 40% 12%;
 
-  --sidebar-accent-foreground: 203.8863 88.2845% 53.1373%;
+  --sidebar-accent-foreground: 43 85% 55%;
 
-  --sidebar-ring: 202.8169 89.1213% 53.1373%;
+  --sidebar-ring: 43 85% 55%;
 
-  /* Dark popover */
-  --popover: 0 0% 0%;
+  /* Popover — matches --bg0 */
+  --popover: 225 30% 8%;
 
-  --popover-foreground: 200 6.6667% 91.1765%;
+  --popover-foreground: 45 30% 90%;
 
-  --popover-border: 0 5% 22%;
+  --popover-border: 43 50% 25%;
 
-  /* Crimson red primary color */
-  --primary: 203.7736 87.6033% 52.5490%;
+  /* Gold primary — matches Grudge Platform --gold */
+  --primary: 43 85% 55%;
 
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
 
-  /* Stone gray secondary */
-  --secondary: 195.0000 15.3846% 94.9020%;
+  /* Deep navy secondary — matches --secondary */
+  --secondary: 225 25% 15%;
 
-  --secondary-foreground: 210 25% 7.8431%;
+  --secondary-foreground: 45 30% 85%;
 
-  /* Muted stone */
-  --muted: 0 0% 9.4118%;
+  /* Muted navy */
+  --muted: 225 25% 12%;
 
-  --muted-foreground: 210 3.3898% 46.2745%;
+  --muted-foreground: 45 15% 60%;
 
-  /* Accent with subtle red tint */
-  --accent: 205.7143 70% 7.8431%;
+  /* Gold accent tint */
+  --accent: 43 40% 12%;
 
-  --accent-foreground: 203.7736 87.6033% 52.5490%;
+  --accent-foreground: 43 85% 55%;
 
-  /* Keep destructive as bright red */
-  --destructive: 2.04 74.62% 61.37%;
+  /* Destructive — matches --crimson */
+  --destructive: 0 65% 40%;
 
   --destructive-foreground: 0 0% 100%;
 
-  --input: 207.6923 27.6596% 18.4314%;
-  --ring: 202.8169 89.1213% 53.1373%;
-  --chart-1: 203.8863 88.2845% 53.1373%;
-  --chart-2: 159.7826 100% 36.0784%;
-  --chart-3: 42.0290 92.8251% 56.2745%;
-  --chart-4: 147.1429 78.5047% 41.9608%;
-  --chart-5: 341.4894 75.2000% 50.9804%;
+  --input: 225 25% 14%;
+  --ring: 43 85% 55%;
+  --chart-1: 43 85% 55%;
+  --chart-2: 142 60% 40%;
+  --chart-3: 0 65% 40%;
+  --chart-4: 260 50% 55%;
+  --chart-5: 200 80% 50%;
 
-  --font-sans: 'Space Grotesk', sans-serif;
-  --font-serif: 'Geist', sans-serif;
-  --font-mono: 'Geist Mono', monospace;
-  --font-display: 'Bebas Neue', 'Oswald', sans-serif;
-  --radius: 0rem; /* 6px - slightly sharper for aggressive look */
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  /* Grudge Platform palette extras */
+  --gold: 43 85% 55%;
+  --gold-light: 43 90% 70%;
+  --gold-dark: 35 70% 35%;
+  --stone: 220 15% 25%;
+  --ok: 142 60% 40%;
+  --crimson: 0 65% 40%;
+  --warn: 32 95% 44%;
+
+  /* Fonts — matching Grudge Platform */
+  --font-sans: 'Spectral SC', 'Inter', serif;
+  --font-serif: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-fell: 'IM Fell English SC', serif;
+  --font-heading: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-body: 'Spectral SC', 'Inter', serif;
+  --radius: 0.375rem;
+  --shadow-2xs: 0px 1px 0px 0px rgba(0,0,0, 0.15);
+  --shadow-xs: 0px 1px 2px 0px rgba(0,0,0, 0.2);
+  --shadow-sm: 0px 1px 3px 0px rgba(0,0,0, 0.25), 0px 1px 2px -1px rgba(0,0,0, 0.15);
+  --shadow: 0px 2px 4px 0px rgba(0,0,0, 0.25), 0px 1px 2px -1px rgba(0,0,0, 0.15);
+  --shadow-md: 0px 4px 6px -1px rgba(0,0,0, 0.3), 0px 2px 4px -2px rgba(0,0,0, 0.15);
+  --shadow-lg: 0px 10px 15px -3px rgba(0,0,0, 0.3), 0px 4px 6px -4px rgba(0,0,0, 0.15);
+  --shadow-xl: 0px 20px 25px -5px rgba(0,0,0, 0.35), 0px 8px 10px -6px rgba(0,0,0, 0.15);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0,0,0, 0.5);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -129,89 +142,98 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* Dark mode inherits from root since we're using a dark-first design */
+/* Dark mode — deeper navy + brighter gold (Grudge Platform aligned) */
 .dark {
-  --button-outline: rgba(255,255,255, .12);
-  --badge-outline: rgba(255,255,255, .06);
+  --button-outline: rgba(212,175,55, .14);
+  --badge-outline: rgba(212,175,55, .08);
 
   --opaque-button-border-intensity: 10;
 
-  --elevate-1: rgba(255,255,255, .05);
-  --elevate-2: rgba(255,255,255, .10);
+  --elevate-1: rgba(212,175,55, .05);
+  --elevate-2: rgba(212,175,55, .10);
 
-  /* Slightly darker for dark mode */
-  --background: 0 0% 0%;
+  /* Deeper navy for dark mode */
+  --background: 225 30% 6%;
 
-  --foreground: 200 6.6667% 91.1765%;
+  --foreground: 45 30% 90%;
 
-  --border: 210 5.2632% 14.9020%;
+  /* Gold-tinted borders (slightly darker in dark mode) */
+  --border: 43 55% 25%;
 
-  --card: 228 9.8039% 10%;
+  --card: 225 25% 10%;
 
-  --card-foreground: 0 0% 85.0980%;
+  --card-foreground: 45 30% 85%;
 
-  --card-border: 0 5% 20%;
+  --card-border: 43 45% 22%;
 
-  --sidebar: 228 9.8039% 10%;
+  --sidebar: 225 28% 8%;
 
-  --sidebar-foreground: 0 0% 85.0980%;
+  --sidebar-foreground: 45 30% 85%;
 
-  --sidebar-border: 205.7143 15.7895% 26.0784%;
+  --sidebar-border: 43 45% 22%;
 
-  /* Brighter crimson for dark mode */
-  --sidebar-primary: 202.8169 89.1213% 53.1373%;
+  /* Brighter gold for dark mode — matches --gold-light */
+  --sidebar-primary: 43 90% 58%;
 
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 0 0% 0%;
 
-  --sidebar-accent: 205.7143 70% 7.8431%;
+  --sidebar-accent: 43 35% 10%;
 
-  --sidebar-accent-foreground: 203.7736 87.6033% 52.5490%;
+  --sidebar-accent-foreground: 43 90% 58%;
 
-  --sidebar-ring: 202.8169 89.1213% 53.1373%;
+  --sidebar-ring: 43 90% 58%;
 
-  --popover: 0 0% 0%;
+  --popover: 225 30% 6%;
 
-  --popover-foreground: 200 6.6667% 91.1765%;
+  --popover-foreground: 45 30% 90%;
 
-  --popover-border: 0 5% 20%;
+  --popover-border: 43 45% 22%;
 
-  /* Brighter primary for dark mode */
-  --primary: 203.7736 87.6033% 52.5490%;
+  /* Brighter gold primary for dark mode */
+  --primary: 43 90% 58%;
 
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
 
-  --secondary: 195.0000 15.3846% 94.9020%;
+  --secondary: 225 25% 13%;
 
-  --secondary-foreground: 210 25% 7.8431%;
+  --secondary-foreground: 45 30% 85%;
 
-  --muted: 0 0% 9.4118%;
+  --muted: 225 25% 10%;
 
-  --muted-foreground: 210 3.3898% 46.2745%;
+  --muted-foreground: 45 15% 55%;
 
-  --accent: 205.7143 70% 7.8431%;
+  --accent: 43 35% 10%;
 
-  --accent-foreground: 203.7736 87.6033% 52.5490%;
+  --accent-foreground: 43 90% 58%;
 
-  --destructive: 356.3033 90.5579% 54.3137%;
+  --destructive: 0 65% 45%;
 
   --destructive-foreground: 0 0% 100%;
 
-  --input: 207.6923 27.6596% 18.4314%;
-  --ring: 202.8169 89.1213% 53.1373%;
-  --chart-1: 203.8863 88.2845% 53.1373%;
-  --chart-2: 159.7826 100% 36.0784%;
-  --chart-3: 42.0290 92.8251% 56.2745%;
-  --chart-4: 147.1429 78.5047% 41.9608%;
-  --chart-5: 341.4894 75.2000% 50.9804%;
+  --input: 225 25% 12%;
+  --ring: 43 90% 58%;
+  --chart-1: 43 90% 58%;
+  --chart-2: 142 60% 40%;
+  --chart-3: 0 65% 45%;
+  --chart-4: 260 50% 55%;
+  --chart-5: 200 80% 50%;
 
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --gold: 43 90% 58%;
+  --gold-light: 43 92% 72%;
+  --gold-dark: 35 70% 35%;
+  --stone: 220 15% 22%;
+  --ok: 142 60% 42%;
+  --crimson: 0 65% 45%;
+  --warn: 32 95% 48%;
+
+  --shadow-2xs: 0px 1px 0px 0px rgba(0,0,0, 0.2);
+  --shadow-xs: 0px 1px 2px 0px rgba(0,0,0, 0.25);
+  --shadow-sm: 0px 1px 3px 0px rgba(0,0,0, 0.3), 0px 1px 2px -1px rgba(0,0,0, 0.2);
+  --shadow: 0px 2px 4px 0px rgba(0,0,0, 0.3), 0px 1px 2px -1px rgba(0,0,0, 0.2);
+  --shadow-md: 0px 4px 6px -1px rgba(0,0,0, 0.35), 0px 2px 4px -2px rgba(0,0,0, 0.2);
+  --shadow-lg: 0px 10px 15px -3px rgba(0,0,0, 0.35), 0px 4px 6px -4px rgba(0,0,0, 0.2);
+  --shadow-xl: 0px 20px 25px -5px rgba(0,0,0, 0.4), 0px 8px 10px -6px rgba(0,0,0, 0.2);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0,0,0, 0.55);
 
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
@@ -233,11 +255,14 @@
 
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --radius: 1.3rem;
-  --font-mono: Menlo, monospace;
+  --radius: 0.375rem;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --spacing: 0.25rem;
-  --font-sans: Open Sans, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-sans: 'Spectral SC', 'Inter', serif;
+  --font-serif: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-fell: 'IM Fell English SC', serif;
+  --font-heading: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-body: 'Spectral SC', 'Inter', serif;
   --tracking-normal: 0em;
 }
 
@@ -421,4 +446,253 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+}
+
+/* ===== WCS FANTASY MMO UI UTILITIES ===== */
+
+/* Animations */
+@keyframes gem-glow {
+  0% { box-shadow: 0 0 0px currentColor; border-color: currentColor; }
+  50% { box-shadow: 0 0 15px currentColor; border-color: #fff; }
+  100% { box-shadow: 0 0 0px currentColor; border-color: currentColor; }
+}
+.animate-gem-glow { animation: gem-glow 2s infinite; }
+
+@keyframes arcane-pulse {
+  0% { box-shadow: 0 0 0px currentColor; border-color: currentColor; }
+  50% { box-shadow: 0 0 20px currentColor; border-color: #fff; transform: rotate(-45deg) scale(1.1); }
+  100% { box-shadow: 0 0 0px currentColor; border-color: currentColor; }
+}
+.animate-arcane-pulse { animation: arcane-pulse 3s infinite; }
+
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 0px currentColor; transform: scale(1); }
+  50% { box-shadow: 0 0 15px currentColor; transform: scale(1.1); }
+  100% { box-shadow: 0 0 0px currentColor; transform: scale(1); }
+}
+.animate-glow-pulse { animation: glow-pulse 2s infinite; }
+
+@keyframes simmer {
+  0% { transform: scale(1); box-shadow: 0 0 0px red; }
+  50% { transform: scale(1.05); box-shadow: 0 0 15px currentColor; }
+  100% { transform: scale(1); box-shadow: 0 0 0px red; }
+}
+.animate-simmer { animation: simmer 2.5s infinite; }
+
+.text-shadow-glow { text-shadow: 0 0 10px currentColor; }
+
+/* Fantasy Panel — Gold bordered like WoW/Diablo */
+.fantasy-panel {
+  position: relative;
+  background: linear-gradient(180deg,
+    hsl(225 25% 14%) 0%,
+    hsl(225 28% 10%) 50%,
+    hsl(225 25% 8%) 100%
+  );
+  border: 2px solid hsl(43 60% 35%);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 4px 12px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(0,0,0,0.3);
+}
+.fantasy-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  padding: 1px;
+  background: linear-gradient(180deg,
+    rgba(212, 175, 55, 0.3) 0%,
+    rgba(160, 120, 40, 0.1) 50%,
+    rgba(100, 80, 30, 0.2) 100%
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Ornate Frame — Double gold border */
+.ornate-frame {
+  position: relative;
+  background: linear-gradient(180deg,
+    hsl(225 22% 16%) 0%,
+    hsl(225 25% 11%) 100%
+  );
+  border: 3px solid transparent;
+  border-image: linear-gradient(180deg,
+    hsl(43 80% 60%) 0%,
+    hsl(43 70% 40%) 50%,
+    hsl(35 60% 30%) 100%
+  ) 1;
+  box-shadow:
+    inset 0 0 20px rgba(0,0,0,0.5),
+    0 0 0 1px hsl(35 50% 25%),
+    0 8px 24px rgba(0,0,0,0.6);
+}
+
+/* Stone Panel — Inventory backgrounds */
+.stone-panel {
+  background:
+    linear-gradient(180deg, rgba(40,45,55,0.95) 0%, rgba(30,35,45,0.98) 100%);
+  border: 2px solid hsl(220 15% 30%);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.4),
+    inset 0 -1px 0 rgba(255,255,255,0.03),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* Parchment Panel — Readable content */
+.parchment-panel {
+  background: linear-gradient(180deg,
+    hsl(40 30% 22%) 0%,
+    hsl(38 25% 18%) 50%,
+    hsl(35 20% 15%) 100%
+  );
+  border: 2px solid hsl(40 40% 30%);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,180,0.1),
+    0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* Inset Panel */
+.inset-panel {
+  background: linear-gradient(180deg,
+    hsl(225 28% 8%) 0%,
+    hsl(225 25% 10%) 100%
+  );
+  border: 1px solid hsl(220 15% 20%);
+  border-radius: 2px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+}
+
+/* Gilded Button — Gold RPG action button */
+.gilded-button {
+  position: relative;
+  background: linear-gradient(180deg,
+    hsl(43 70% 45%) 0%,
+    hsl(38 65% 35%) 50%,
+    hsl(35 60% 28%) 100%
+  );
+  border: 2px solid hsl(43 50% 50%);
+  border-radius: 4px;
+  color: hsl(225 30% 10%);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -2px 4px rgba(0,0,0,0.2),
+    0 2px 4px rgba(0,0,0,0.4);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.gilded-button:hover {
+  background: linear-gradient(180deg,
+    hsl(43 80% 55%) 0%,
+    hsl(43 70% 45%) 50%,
+    hsl(38 65% 35%) 100%
+  );
+  border-color: hsl(43 60% 60%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    0 0 12px rgba(212, 175, 55, 0.4),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+.gilded-button:active {
+  background: linear-gradient(180deg,
+    hsl(35 60% 30%) 0%,
+    hsl(38 65% 35%) 100%
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.4),
+    0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Dark Button — Secondary RPG button */
+.dark-button {
+  background: linear-gradient(180deg,
+    hsl(225 25% 22%) 0%,
+    hsl(225 28% 15%) 100%
+  );
+  border: 2px solid hsl(43 50% 35%);
+  border-radius: 4px;
+  color: hsl(43 70% 65%);
+  font-family: var(--font-heading);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.4);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.dark-button:hover {
+  background: linear-gradient(180deg,
+    hsl(225 25% 26%) 0%,
+    hsl(225 28% 18%) 100%
+  );
+  border-color: hsl(43 60% 45%);
+  color: hsl(43 80% 70%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 8px rgba(212, 175, 55, 0.2),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* Rune Glow */
+.rune-glow {
+  box-shadow:
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    inset 0 0 10px rgba(255,255,255,0.1);
+}
+
+/* Gold Text Gradient */
+.gold-text {
+  background: linear-gradient(180deg,
+    hsl(43 90% 75%) 0%,
+    hsl(43 85% 55%) 40%,
+    hsl(35 70% 40%) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Rarity Colors (WoW-style) */
+.rarity-common { color: hsl(0 0% 70%); }
+.rarity-uncommon { color: hsl(120 60% 50%); }
+.rarity-rare { color: hsl(220 80% 60%); }
+.rarity-epic { color: hsl(280 70% 60%); }
+.rarity-legendary { color: hsl(35 100% 55%); }
+
+/* Vignette overlay */
+.vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+}
+
+/* Fantasy Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(225 25% 10%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(43 50% 30%);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(43 60% 40%);
 }

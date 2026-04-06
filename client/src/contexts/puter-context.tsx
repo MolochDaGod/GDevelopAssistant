@@ -3,6 +3,7 @@ import puterService, { type PuterUser } from '@/lib/puter';
 import puterStorage from '@/lib/puterStorage';
 import { PuterLoader } from '@/components/puter-loader';
 import { getAuthData } from '@/lib/auth';
+import { createGrudgeCloud } from '@/lib/grudge-cloud-impl';
 
 interface PuterContextType {
   isReady: boolean;
@@ -68,6 +69,18 @@ export function PuterProvider({ children }: { children: ReactNode }) {
         setIsSignedIn(false);
         setUser(null);
       }
+
+      // Initialize GrudgeCloud singleton after SDK is ready
+      try {
+        const cloud = createGrudgeCloud();
+        await cloud.init();
+        window.GrudgeCloud = cloud;
+        window.dispatchEvent(
+          new CustomEvent('grudge-cloud-ready', { detail: cloud }),
+        );
+      } catch {
+        // GrudgeCloud init is non-critical
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize cloud storage';
       console.warn('Puter unavailable, running in local-only mode:', errorMessage);
@@ -90,10 +103,13 @@ export function PuterProvider({ children }: { children: ReactNode }) {
 
   // Initialize Puter storage directories and link Puter UUID to Grudge account
   const initPuterStorageAndLink = useCallback(async (userData: PuterUser | null) => {
-    try {
-      await puterStorage.initializeDirectories();
-    } catch (err) {
-      console.warn('Failed to initialize Puter directories:', err);
+    // Only attempt mkdir when Puter is authenticated (avoids 403 spam)
+    if (userData?.uuid) {
+      try {
+        await puterStorage.initializeDirectories();
+      } catch (err) {
+        console.warn('Failed to initialize Puter directories:', err);
+      }
     }
     // Link Puter UUID to Grudge user if both are available
     if (userData?.uuid) {

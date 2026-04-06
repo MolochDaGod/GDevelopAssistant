@@ -1,9 +1,20 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, jsonb, integer, boolean, index } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema as _createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for Replit Auth
+// Workaround: drizzle-zod 0.7.x type inference breaks .omit()/.pick() on
+// the schema returned by createInsertSchema.  This typed shim lets
+// downstream .omit() calls compile while z.infer resolves to `any`
+// (preserving assignability to drizzle insert/update helpers).
+type _OmittableZod = z.ZodType<any> & {
+  omit(mask: Record<string, true>): z.ZodType<any>;
+  pick(mask: Record<string, true>): z.ZodType<any>;
+};
+const createInsertSchema: (...args: Parameters<typeof _createInsertSchema>) => _OmittableZod =
+  _createInsertSchema as any;
+
+// Session storage table for Grudge ID Auth
 export const sessions = pgTable(
   "sessions",
   {
@@ -14,7 +25,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
+// User storage table for Grudge ID Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -640,6 +651,122 @@ export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
 export const insertLevelRequirementSchema = createInsertSchema(levelRequirements).omit({
   id: true,
 });
+
+// ============================================
+// GRUDGE ACCOUNTS — Universal Grudge Studio identity
+// Matches WCS accounts schema. Every login method produces a row here.
+// Grudge ID = Puter ID. Crossmint wallet auto-created on registration.
+// ============================================
+export const accounts = pgTable("accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  grudgeId: varchar("grudge_id", { length: 64 }).notNull().unique(),
+  username: varchar("username", { length: 50 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }),
+  email: varchar("email", { length: 255 }),
+  avatarUrl: text("avatar_url"),
+  faction: varchar("faction", { length: 50 }),
+  // Auth — password
+  passwordHash: varchar("password_hash", { length: 255 }),
+  // Auth — Solana wallet (Crossmint auto-created)
+  walletAddress: varchar("wallet_address", { length: 255 }),
+  walletType: varchar("wallet_type", { length: 50 }), // crossmint-custodial | external
+  crossmintWalletId: varchar("crossmint_wallet_id", { length: 255 }),
+  crossmintEmail: varchar("crossmint_email", { length: 255 }),
+  // Auth — Puter (Grudge ID IS the Puter ID)
+  puterUuid: varchar("puter_uuid", { length: 255 }),
+  puterUsername: varchar("puter_username", { length: 100 }),
+  // Auth — Google
+  googleId: varchar("google_id", { length: 255 }),
+  googleEmail: varchar("google_email", { length: 255 }),
+  // Auth — Discord
+  discordId: varchar("discord_id", { length: 255 }),
+  discordUsername: varchar("discord_username", { length: 100 }),
+  // Auth — GitHub
+  githubId: varchar("github_id", { length: 255 }),
+  githubUsername: varchar("github_username", { length: 100 }),
+  // Account status
+  isPremium: boolean("is_premium").default(false),
+  isGuest: boolean("is_guest").default(false),
+  // Balances
+  gold: integer("gold").default(0),
+  gbuxBalance: integer("gbux_balance").default(0),
+  // Game counts
+  totalCharacters: integer("total_characters").default(0),
+  totalIslands: integer("total_islands").default(0),
+  homeIslandId: varchar("home_island_id", { length: 255 }),
+  hasCompletedTutorial: boolean("has_completed_tutorial").default(false),
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  lastLoginAt: timestamp("last_login_at"),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+}, (table) => [
+  index("accounts_grudge_id_idx").on(table.grudgeId),
+  index("accounts_puter_uuid_idx").on(table.puterUuid),
+  index("accounts_wallet_idx").on(table.walletAddress),
+  index("accounts_discord_id_idx").on(table.discordId),
+  index("accounts_github_id_idx").on(table.githubId),
+]);
+
+export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true });
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+export type Account = typeof accounts.$inferSelect;
+
+// ============================================
+// GRUDGE CHARACTERS — Per-player WCS-compatible characters
+// Linked to accounts.id. Full 8 WCS stats, equipment, professions, NFT fields.
+// Same schema as WCS characters table for cross-game portability.
+// ============================================
+export const grudgeCharacters = pgTable("grudge_characters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").references(() => accounts.id).notNull(),
+  grudgeId: varchar("grudge_id", { length: 64 }),
+  name: text("name").notNull(),
+  classId: text("class_id"), // warrior, mage, ranger, shapeshifter
+  raceId: text("race_id"), // human, orc, elf, dwarf, barbarian, undead
+  profession: text("profession"),
+  faction: text("faction"),
+  level: integer("level").notNull().default(1),
+  experience: integer("experience").notNull().default(0),
+  gold: integer("gold").notNull().default(1000),
+  skillPoints: integer("skill_points").notNull().default(5),
+  attributePoints: integer("attribute_points").notNull().default(0),
+  // WCS 8-stat attributes
+  attributes: jsonb("attributes").default(sql`'{"Strength":0,"Vitality":0,"Endurance":0,"Intellect":0,"Wisdom":0,"Dexterity":0,"Agility":0,"Tactics":0}'::jsonb`),
+  // 10-slot equipment
+  equipment: jsonb("equipment").default(sql`'{"head":null,"chest":null,"legs":null,"feet":null,"hands":null,"shoulders":null,"mainHand":null,"offHand":null,"accessory1":null,"accessory2":null}'::jsonb`),
+  // 5 profession progressions
+  professionProgression: jsonb("profession_progression").default(sql`'{"Miner":{"level":1,"xp":0,"pointsSpent":0},"Forester":{"level":1,"xp":0,"pointsSpent":0},"Mystic":{"level":1,"xp":0,"pointsSpent":0},"Chef":{"level":1,"xp":0,"pointsSpent":0},"Engineer":{"level":1,"xp":0,"pointsSpent":0}}'::jsonb`),
+  // Inventory
+  inventory: jsonb("inventory").default(sql`'[]'::jsonb`),
+  // Combat
+  abilities: jsonb("abilities").default(sql`'[]'::jsonb`),
+  skillTree: jsonb("skill_tree").default(sql`'{}'::jsonb`),
+  currentHealth: integer("current_health"),
+  currentMana: integer("current_mana"),
+  currentStamina: integer("current_stamina"),
+  avatarUrl: text("avatar_url"),
+  // Body customization (height, skin color, proportions, armor tint)
+  customization: jsonb("customization").default(sql`'{}'::jsonb`),
+  // NFT fields
+  isNft: boolean("is_nft").default(false),
+  nftMintAddress: varchar("nft_mint_address", { length: 255 }),
+  nftCollection: varchar("nft_collection", { length: 255 }),
+  nftMintedAt: timestamp("nft_minted_at"),
+  // State
+  isActive: boolean("is_active").default(true),
+  slotIndex: integer("slot_index").default(0),
+  isGuest: boolean("is_guest").default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+}, (table) => [
+  index("grudge_chars_account_id_idx").on(table.accountId),
+  index("grudge_chars_grudge_id_idx").on(table.grudgeId),
+]);
+
+export const insertGrudgeCharacterSchema = createInsertSchema(grudgeCharacters).omit({ id: true, createdAt: true });
+export type InsertGrudgeCharacter = z.infer<typeof insertGrudgeCharacterSchema>;
+export type GrudgeCharacter = typeof grudgeCharacters.$inferSelect;
 
 // Saved custom characters from character creator (MMO-style)
 export const savedCharacters = pgTable("saved_characters", {
@@ -1460,3 +1587,32 @@ export type StorageAuditLog = typeof storageAuditLogs.$inferSelect;
 
 export type InsertUserStorageQuota = z.infer<typeof insertUserStorageQuotaSchema>;
 export type UserStorageQuota = typeof userStorageQuotas.$inferSelect;
+
+// -----------------------------------------------------------------------------
+// GRUDGE DEVICES
+// Tracks ESP32-GRD17 hardware nodes and browser firmware instances
+// linked to Grudge accounts. Populated by POST /api/devices/register.
+// -----------------------------------------------------------------------------
+
+export const grudge_devices = pgTable("grudge_devices", {
+  id:              varchar("id", { length: 64 }).primaryKey(),
+  grudgeId:        varchar("grudge_id", { length: 64 }).notNull(),
+  deviceName:      varchar("device_name", { length: 128 }).notNull(),
+  publicKey:       varchar("public_key", { length: 128 }).notNull(),
+  firmwareVersion: varchar("firmware_version", { length: 64 }).notNull().default("unknown"),
+  hardwareType:    varchar("hardware_type", { length: 64 }).notNull().default("browser"),
+  status:          varchar("status", { length: 20 }).notNull().default("online"),
+  lastSeen:        text("last_seen"),
+  lastHeartbeat:   text("last_heartbeat"),    // JSON blob: blockHeight, uptime, balances, etc.
+  createdAt:       text("created_at").notNull(),
+}, (t) => ({
+  grudgeIdIdx: index("grd_devices_grudge_id_idx").on(t.grudgeId),
+  pubkeyIdx:   index("grd_devices_pubkey_idx").on(t.publicKey),
+}));
+
+export const insertGrudgeDeviceSchema = createInsertSchema(grudge_devices).omit({
+  createdAt: true,
+});
+
+export type GrudgeDevice       = typeof grudge_devices.$inferSelect;
+export type InsertGrudgeDevice = z.infer<typeof insertGrudgeDeviceSchema>;

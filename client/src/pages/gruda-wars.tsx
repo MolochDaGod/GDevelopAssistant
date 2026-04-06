@@ -87,8 +87,7 @@ const CLASS_COLORS: Record<string, string> = {
   warrior: "text-red-400 border-red-400",
   mage: "text-blue-400 border-blue-400",
   ranger: "text-green-400 border-green-400",
-  rogue: "text-purple-400 border-purple-400",
-  cleric: "text-yellow-400 border-yellow-400",
+  worge: "text-amber-400 border-amber-400",
 };
 
 // Fallback WCS route paths — camelCase key → actual kebab-case path
@@ -287,8 +286,9 @@ export default function GrudaWars() {
                 <div className="h-2" style={{
                   background: hero.classId === "warrior" ? "linear-gradient(to right, #dc2626, #f97316)"
                     : hero.classId === "mage" ? "linear-gradient(to right, #3b82f6, #8b5cf6)"
-                    : hero.classId === "rogue" ? "linear-gradient(to right, #8b5cf6, #ec4899)"
-                    : "linear-gradient(to right, #eab308, #f97316)",
+                  : hero.classId === "ranger" ? "linear-gradient(to right, #22c55e, #10b981)"
+                    : hero.classId === "worge" ? "linear-gradient(to right, #eab308, #f97316)"
+                    : "linear-gradient(to right, #6b7280, #9ca3af)",
                 }} />
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
@@ -425,7 +425,7 @@ export default function GrudaWars() {
                   onClick={() => openSystem(grudachainUrl)}
                 >
                   <CardContent className="p-3 flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-amber-400" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">AI Node Dashboard</p>
                       <p className="text-[10px] text-muted-foreground">GRUDA Legion AI services</p>
