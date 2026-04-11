@@ -31,25 +31,25 @@
     "models-3d": {
       "type": "3D Model",
       "extensions": ["glb", "gltf"],
-      "projects": ["GDevelopAssistant", "DiabloGrudge-Server", "Grudge-RPG-Sprite-Attack"],
+      "projects": ["GDevelopAssistant", "DiabloGrudge-Server", "Grudge-RPG-Sprite-Attack", "grudge-warlords-rts"],
       "description": "3D models in GLB format for rendering"
     },
     "sprites": {
       "type": "2D Sprite",
       "extensions": ["png", "webp"],
-      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack", "Warlord-Crafting-Suite"],
+      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack", "Warlord-Crafting-Suite", "grudge-warlords-rts"],
       "description": "2D pixel art sprites for units, UI, and effects"
     },
     "animations": {
       "type": "Animation Data",
       "extensions": ["json", "txt"],
-      "projects": ["GDevelopAssistant", "DiabloGrudge-Server"],
+      "projects": ["GDevelopAssistant", "DiabloGrudge-Server", "grudge-warlords-rts"],
       "description": "Animation metadata and configs"
     },
     "audio": {
       "type": "Audio",
       "extensions": ["mp3", "wav", "ogg"],
-      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack"],
+      "projects": ["GDevelopAssistant", "Grudge-RPG-Sprite-Attack", "grudge-warlords-rts"],
       "description": "Sound effects and music"
     }
   },
