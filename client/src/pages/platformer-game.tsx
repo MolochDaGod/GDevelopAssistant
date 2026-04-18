@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
   Play, 
   Pause, 
   Home, 
@@ -59,6 +61,14 @@ interface Player {
 }
 
 export default function PlatformerGame() {
+  return (
+    <GrudgeGameWrapper gameSlug="platformer" gameName="Pixel Warrior" xpPerThousand={10} goldPerGame={5}>
+      {(session) => <PlatformerGameInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function PlatformerGameInner({ session }: { session: GrudgeGameSession }) {
   const [, navigate] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);

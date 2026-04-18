@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
   Play, 
   Pause, 
   Home, 
@@ -37,6 +39,14 @@ const TILE_COLORS = [
 const TILE_SYMBOLS = ['★', '◆', '●', '▲', '■', '♥'];
 
 export default function PuzzleGame() {
+  return (
+    <GrudgeGameWrapper gameSlug="puzzle" gameName="Gem Crusher" xpPerThousand={8} goldPerGame={10}>
+      {(session) => <PuzzleGameInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function PuzzleGameInner({ session }: { session: GrudgeGameSession }) {
   const [, navigate] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);

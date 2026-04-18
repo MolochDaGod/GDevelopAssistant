@@ -13,6 +13,8 @@ import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 const MAP_SIZE = 80;
 const LANE_OFFSETS = [-20, 0, 20]; // top, mid, bot lane X-offsets
@@ -33,6 +35,14 @@ interface Tower {
 }
 
 export default function GrudgeGangs() {
+  return (
+    <GrudgeGameWrapper gameSlug="grudge-gangs" gameName="Grudge Gangs" xpPerThousand={20} goldPerGame={15}>
+      {(session) => <GrudgeGangsInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function GrudgeGangsInner({ session }: { session: GrudgeGameSession }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [kills, setKills] = useState(0);
   const [champHP, setChampHP] = useState(100);

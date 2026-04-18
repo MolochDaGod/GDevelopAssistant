@@ -26,6 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
   Upload, Download, Sparkles, Layers, RefreshCw,
   Image as ImageIcon, Zap, Database, Link, Loader2,
   ChevronDown, ChevronUp, Lock, Coins,
@@ -295,6 +297,14 @@ const DEFAULT_FX: Effects = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CardForgePage() {
+  return (
+    <GrudgeGameWrapper gameSlug="card-forge" gameName="Card Forge" xpPerThousand={5} goldPerGame={5}>
+      {(session) => <CardForgePageInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function CardForgePageInner({ session }: { session: GrudgeGameSession }) {
   const { toast } = useToast();
 
   const [card, setCard]           = useState<CardDef>(DEFAULT_CARD);

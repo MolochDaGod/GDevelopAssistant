@@ -14,6 +14,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 // ── ObjectStore CDN base ──
 const CDN = 'https://assets.grudge-studio.com/sprites/characters';
@@ -220,6 +222,14 @@ interface Fighter {
 // ── Component ──
 
 export default function GrudgeBox() {
+  return (
+    <GrudgeGameWrapper gameSlug="grudge-box" gameName="GrudgeBox" xpPerThousand={15} goldPerGame={10}>
+      {(session) => <GrudgeBoxInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function GrudgeBoxInner({ session }: { session: GrudgeGameSession }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<Phase>('select');

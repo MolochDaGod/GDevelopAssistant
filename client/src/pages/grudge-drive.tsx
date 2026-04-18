@@ -5,6 +5,8 @@ import { ArrowLeft, Car, Trophy, Clock, Gamepad2, Zap, AlertCircle } from "lucid
 import { Link } from "wouter";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { overdriveApi, type Track, type LeaderboardEntry } from "@/lib/gameApi";
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 const FALLBACK_TRACKS: Track[] = [
   { id: "houston-strip", name: "Houston Strip", description: "Downtown drag race through the heart of Houston.", length: 400, difficulty: 2, terrain: "asphalt" },
@@ -280,6 +282,14 @@ function HoustonMapPreview({ tracks, selectedId }: { tracks: Track[]; selectedId
 }
 
 export default function GrudgeDrive() {
+  return (
+    <GrudgeGameWrapper gameSlug="grudge-drive" gameName="Overdrive" xpPerThousand={10} goldPerGame={8}>
+      {(session) => <GrudgeDriveInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function GrudgeDriveInner({ session }: { session: GrudgeGameSession }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isRacingRef = useRef(false);
   const raceIdRef = useRef<string | null>(null);

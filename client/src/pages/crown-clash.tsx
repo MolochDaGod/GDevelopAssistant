@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ALL_CARDS, getDefaultDeck, RARITY_COLORS, CARD_TYPE_COLORS, type CrownClashCard } from '@/data/crown-clash-cards';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 // ── Game State ──
 
@@ -104,6 +106,14 @@ function createBurst(scene: THREE.Scene, position: THREE.Vector3, color: string)
 // ── Component ──
 
 export default function CrownClash() {
+  return (
+    <GrudgeGameWrapper gameSlug="crown-clash" gameName="Crown Clash" xpPerThousand={15} goldPerGame={10}>
+      {(session) => <CrownClashInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function CrownClashInner({ session }: { session: GrudgeGameSession }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);

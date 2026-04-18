@@ -102,6 +102,49 @@ const GDEVELOP_SYSTEM_PROMPT = `You are an expert GDevelop game development assi
 // ════════════════════════════════════════════
 setupGrudgeAuth(app);
 
+// ── Aliases for grudge-auth-modal.js (legacy endpoints) ──
+// The external auth modal at grudge-platform.vercel.app uses these old paths.
+// Redirect them to the canonical /api/auth/* routes.
+app.get("/api/oauth-google", (req, res) => res.redirect(307, `/api/auth/google?${new URLSearchParams(req.query as Record<string, string>)}`));
+app.get("/api/oauth-github", (req, res) => res.redirect(307, `/api/auth/github?${new URLSearchParams(req.query as Record<string, string>)}`));
+app.get("/api/discord-login", (req, res) => res.redirect(307, `/api/auth/discord?${new URLSearchParams(req.query as Record<string, string>)}`));
+app.post("/api/connect-wallet", (req, res) => {
+  // Forward body to /api/auth/wallet
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
+  fetch(`${req.protocol}://${req.get("host")}/api/auth/wallet`, {
+    method: "POST", headers, body: JSON.stringify(req.body),
+  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Wallet proxy failed" }));
+});
+app.post("/api/puter", (req, res) => {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
+  fetch(`${req.protocol}://${req.get("host")}/api/auth/puter`, {
+    method: "POST", headers, body: JSON.stringify(req.body),
+  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Puter proxy failed" }));
+});
+app.post("/api/puter-link", (req, res) => {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
+  fetch(`${req.protocol}://${req.get("host")}/api/auth/link-puter`, {
+    method: "POST", headers, body: JSON.stringify(req.body),
+  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Puter link proxy failed" }));
+});
+app.post("/api/phone-send", (req, res) => {
+  req.body.action = "send";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  fetch(`${req.protocol}://${req.get("host")}/api/auth/phone`, {
+    method: "POST", headers, body: JSON.stringify(req.body),
+  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Phone send proxy failed" }));
+});
+app.post("/api/phone-verify", (req, res) => {
+  req.body.action = "verify";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  fetch(`${req.protocol}://${req.get("host")}/api/auth/phone`, {
+    method: "POST", headers, body: JSON.stringify(req.body),
+  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Phone verify proxy failed" }));
+});
+
 // ════════════════════════════════════════════
 // Grudge backend proxy (/api/grudge/game|account|id|launcher)
 // ════════════════════════════════════════════

@@ -13,6 +13,8 @@ import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 interface DecayEnemy {
   mesh: THREE.Mesh;
@@ -22,6 +24,14 @@ interface DecayEnemy {
 }
 
 export default function Decay() {
+  return (
+    <GrudgeGameWrapper gameSlug="decay" gameName="Decay" xpPerThousand={20} goldPerGame={15}>
+      {(session) => <DecayInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function DecayInner({ session }: { session: GrudgeGameSession }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hp, setHp] = useState(100);
   const [ammo, setAmmo] = useState(30);

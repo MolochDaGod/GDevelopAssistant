@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
   Play,
   Pause,
   Home,
@@ -136,6 +138,14 @@ const CW = 700;
 const CH = 900;
 
 export default function ShooterGame() {
+  return (
+    <GrudgeGameWrapper gameSlug="shooter" gameName="Space Assault" xpPerThousand={12} goldPerGame={8}>
+      {(session) => <ShooterGameInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function ShooterGameInner({ session }: { session: GrudgeGameSession }) {
   const [, navigate] = useLocation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);

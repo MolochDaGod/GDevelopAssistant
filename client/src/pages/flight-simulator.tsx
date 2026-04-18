@@ -11,8 +11,18 @@
 import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { Badge } from '@/components/ui/badge';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 
 export default function FlightSimulator() {
+  return (
+    <GrudgeGameWrapper gameSlug="flight-sim" gameName="Sky Command" xpPerThousand={10} goldPerGame={8}>
+      {(session) => <FlightSimulatorInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function FlightSimulatorInner({ session }: { session: GrudgeGameSession }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hud, setHud] = useState({ alt: 50, speed: 60, heading: 0 });
 

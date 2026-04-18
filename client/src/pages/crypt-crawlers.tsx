@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skull, ArrowLeft, Sword, Shield, Wand2, Footprints } from 'lucide-react';
 import { Link } from 'wouter';
+import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
+import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
 // SpriteEffects2DManager removed (Three.js) — 2D effects will be rebuilt
 type SpriteEffects2DManager = { spawnAt: (type: string, x: number, y: number, color: string, opts?: any) => void; dispose: () => void };
 
@@ -315,6 +317,14 @@ const CANVAS_H = VIEW_TILES_Y * TILE_SIZE;
 // ── Component ──────────────────────────────────────────────────────
 
 export default function CryptCrawlers() {
+  return (
+    <GrudgeGameWrapper gameSlug="crypt-crawlers" gameName="Crypt Crawlers" xpPerThousand={20} goldPerGame={15}>
+      {(session) => <CryptCrawlersInner session={session} />}
+    </GrudgeGameWrapper>
+  );
+}
+
+function CryptCrawlersInner({ session }: { session: GrudgeGameSession }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const miniRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
