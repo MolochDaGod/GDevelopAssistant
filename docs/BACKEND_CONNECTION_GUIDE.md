@@ -1,7 +1,7 @@
 # Grudge Backend Connection Guide
 
 > **Reference architecture** for connecting any Grudge Studio app to the backend services.
-> This guide documents the working, production-verified pattern used by GDevelop Assistant
+> This guide documents the working, production-verified pattern used by grudgeDot
 > and should be followed by all Grudge Studio apps and sites.
 
 ## Architecture Overview
@@ -129,8 +129,8 @@ res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-gr
   "security": {
     "cors": {
       "origins": [
-        "https://gdevelop-assistant.vercel.app",
-        "https://gdevelop-assistant-git-main-grudgenexus.vercel.app",
+        "https://grudgedot.vercel.app",
+        "https://grudgedot-git-main-grudgenexus.vercel.app",
         "https://*.vercel.app",
         "https://*.grudge-studio.com"
       ]
@@ -186,7 +186,7 @@ app.get("/api/health", async (_req, res) => {
 
 ### Connections Page (`/connections`)
 
-GDevelop Assistant includes a live probe dashboard at `/connections` that checks all 4
+grudgeDot includes a live probe dashboard at `/connections` that checks all 4
 backend services in real-time. Use this as a reference when building connection monitoring
 into other Grudge Studio apps:
 

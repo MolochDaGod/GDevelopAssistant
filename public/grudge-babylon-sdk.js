@@ -15,7 +15,7 @@
  *   const answer = await BabylonAI.askSage("How does animation retargeting work?");
  *
  * Endpoints auto-resolve:
- *   - If running inside GDevelop Assistant → proxied via /api/gruda-legion/babylon/*
+ *   - If running inside grudgeDot → proxied via /api/gruda-legion/babylon/*
  *   - Otherwise → direct to Cloudflare Workers at babylon-ai-workers.grudge.workers.dev
  */
 
@@ -23,11 +23,11 @@ const WORKER_URL = 'https://babylon-ai-workers.grudge.workers.dev';
 const PROXY_PREFIX = '/api/gruda-legion/babylon';
 
 function resolveBase() {
-  // If we're on the same origin as GDevelop Assistant, use the proxy
+  // If we're on the same origin as grudgeDot, use the proxy
   if (typeof window !== 'undefined') {
     try {
       const host = window.location.hostname;
-      if (host === 'localhost' || host.includes('gdevelop-assistant') || host.includes('grudge-studio')) {
+      if (host === 'localhost' || host.includes('grudgedot') || host.includes('gdevelop-assistant') || host.includes('grudge-studio')) {
         return PROXY_PREFIX;
       }
     } catch (_) { /* SSR or restricted context */ }

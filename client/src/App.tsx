@@ -17,7 +17,6 @@ import { AuthGuard } from "@/components/AuthGuard";
 import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
 
-const AuthPage = lazy(() => import("@/pages/auth"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const TermsPage = lazy(() => import("@/pages/tos"));
 
@@ -268,16 +267,13 @@ export default function App() {
 }
 
 /**
- * Top-level router: /auth is rendered outside AuthGuard so it's always accessible.
- * Everything else goes through AuthGuard → AppLayout.
+ * Top-level router: /privacy and /tos are public. The AuthGuard captures any
+ * token from the URL and validates it silently — no redirect-to-login, so
+ * every route is publicly accessible. Auth state is optional/progressive.
  */
 function AuthRouter() {
   return (
     <Switch>
-      <Route path="/auth">
-        <AuthPage />
-        <Toaster />
-      </Route>
       <Route path="/privacy">
         <PrivacyPage />
       </Route>

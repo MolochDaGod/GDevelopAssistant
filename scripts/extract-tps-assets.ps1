@@ -10,7 +10,7 @@
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$root = "F:\GDevelopAssistant\public\assets\tps"
+$root = "F:\grudgeDot\public\assets\tps"
 
 # ── Create directories ──
 $dirs = @(

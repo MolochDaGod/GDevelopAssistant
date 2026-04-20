@@ -1,5 +1,5 @@
 /**
- * usePlayerActivity — Tracks player activity across all GDevelop game tabs.
+ * usePlayerActivity — Tracks player activity across all grudgeDot game tabs.
  *
  * - Records which game was played, when, and with which character
  * - Aggregates cross-game stats (total plays, best scores per game)

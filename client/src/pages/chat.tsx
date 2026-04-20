@@ -163,7 +163,7 @@ export default function ChatPage() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
                 <Sparkles className="h-8 w-8 text-primary" />
               </div>
-              <h2 className="mb-2 text-xl font-semibold">Welcome to GrudgeDevelop AI Assistant</h2>
+              <h2 className="mb-2 text-xl font-semibold">Welcome to GrudgeDot AI</h2>
               <p className="mb-6 max-w-md text-muted-foreground">
                 I can help you create amazing games, suggest features, generate game logic,
                 and guide you through using GrudgeDevelop's powerful tools.

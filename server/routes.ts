@@ -44,7 +44,7 @@ import {
   insertGameProjectSchema, 
   insertChatConversationSchema, 
   insertChatMessageSchema, 
-  insertGdevelopAssetSchema,
+  insertGrudgedotAssetSchema,
   insertRtsProjectSchema,
   insertRtsAssetSchema,
   insertRtsUnitTemplateSchema,
@@ -53,8 +53,8 @@ import {
   insertLobbyPlayerSchema,
   insertPlayerProfileSchema,
   insertUnifiedAssetSchema,
-  gdevelopAssets,
-  gdevelopToolsSchema,
+  grudgedotAssets,
+  grudgedotToolsSchema,
   users,
   openrtsUnits,
   openrtsWeapons,
@@ -86,35 +86,31 @@ const xai = process.env.XAI_API_KEY
     })
   : null;
 
-const GDEVELOP_SYSTEM_PROMPT = `You are an expert GDevelop game development assistant powered by xAI's Grok. GDevelop is an open-source, cross-platform game creator that allows users to create 2D and 3D games without programming using visual events.
+const GRUDGEDOT_SYSTEM_PROMPT = `You are the grudgeDot assistant, powered by xAI's Grok. grudgeDot is the Grudge Studio launcher and game-dev workbench for 2D and 3D games built on React, Babylon.js, Three.js, Phaser, and Colyseus.
 
 Key capabilities you should help with:
-- Game design and mechanics guidance
-- GDevelop event system and behaviors
-- 2D platformers, top-down games, side-scrollers, and RTS strategy games
-- 3D game development with models and cameras
-- Asset recommendations from the free library (Kenney, OpenGameArt, itch.io, etc.)
-- Game logic and event creation
-- Physics, collisions, and movement
-- UI/UX design for games
-- Performance optimization
-- Integration with game development tools:
-  * LUME (lume.io) - GPU-powered 3D HTML library using custom elements (<lume-box>, <lume-gltf-model>, <lume-fbx-model>) built on Three.js, ideal for RTS games with element-behaviors for entity-component patterns
-  * Yuka (mugen87.github.io/yuka) - Game AI library for NavMesh pathfinding with A* algorithm, steering behaviors, and entity management for RTS unit AI
-  * Stemkoski Three.js Examples (stemkoski.github.io/Three.js) - 83 heavily commented examples teaching Three.js fundamentals including chase camera, particle systems, collision detection, mouse interaction, sprite labels, and shader effects
-  * Babylon.js viewer for 3D model visualization
-  * Terrain generators like wgen for procedural world building
-  * GDevelop's web editor for rapid prototyping
+- Game design and mechanics guidance for the Grudge Studio universe (Gruda Wars, Warlord Crafting Suite, MOBA, MMO, RTS, roguelikes)
+- WCS attributes, tier gear (T0–T5), professions, crafting, and skill-tree design
+- 2D platformers, top-down games, side-scrollers, and RTS strategy games built with Phaser / Babylon
+- 3D game development with Babylon.js, Three.js, Needle Engine, and Rapier/Havok physics
+- Asset recommendations from free libraries (Kenney, OpenGameArt, KayKit, itch.io) and the Grudge ObjectStore
+- Game logic, state machines, and ECS design (bitecs / miniplex)
+- Physics, collisions, and movement (Havok, Rapier, Matter)
+- UI/UX design for games (Radix + Tailwind in the launcher; in-game HUDs)
+- Performance optimization and render pipelines
+- Integration with companion tools:
+  * Babylon.js + Needle Engine for 3D scenes
+  * Three.js for lightweight 3D and shader demos
+  * Phaser 3 for 2D MMO / dungeon-crawler pages
+  * Colyseus rooms (lobby, gruda-wars, rts-battle) for multiplayer
+  * Puter KV/FS for per-user cloud saves (see the grudge-puter-js skill)
+  * GRUDACHAIN Solana cNFTs via Crossmint for character/home-island ownership
 
-For RTS (Real-Time Strategy) games specifically, recommend these GDevelop built-in behaviors and extensions:
-- Top-down Movement behavior (built-in, always available): Allows units to move in 4 or 8 directions with keyboard, gamepad, or virtual stick controls. Configure acceleration (400-600 px/s²), max speed (200-400 px/s), and rotation settings. Documentation: wiki.gdevelop.io/gdevelop5/behaviors/topdown/
-- Pathfinding behavior (built-in): Smart navigation around obstacles for units. Essential for RTS games to avoid collision. Documentation: wiki.gdevelop.io/gdevelop5/behaviors/pathfinding/
-- RTS-like Unit Selection extension (by VictrisGames & Slash): Draws selection areas using Shape Painter for click-select or drag-box selection. Supports control groups and unique ID assignment. Installation: Search "RTS" in GDevelop extension library. Documentation: wiki.gdevelop.io/gdevelop5/extensions/rtsunit-selection/
-- Top-down Movement Animator extension: Changes animation based on movement direction. Perfect for directional unit sprites. Documentation: wiki.gdevelop.io/gdevelop5/extensions/top-down-movement-animator/
-- Reference the premium RTS Template by VegeTato (~$4 USD) for production-quality examples: gdevelop.io/en-gb/game-example/premium/real-time-strategy-84a6fcf9-ecb6-4613-9a36-191df54d8fbc
-- Free community example for learning basics: forum.gdevelop.io/t/example-rts-game-units-management/50652
-
-When users ask about building RTS games, always mention these GDevelop-native tools before suggesting external libraries.
+For RTS (Real-Time Strategy) features, prefer these patterns:
+- Pathfinding with A* over simplex-noise terrain
+- Selection via drag-box + click, control groups (1-9)
+- Fog of war with per-team visibility buffers
+- Population and resource economy (gold / wood / food) balanced to Warcraft 3 ratios
 
 Best practices for game development:
 - Start with simple mechanics and iterate
@@ -122,17 +118,15 @@ Best practices for game development:
 - Test frequently on target platforms
 - Optimize only after establishing fun gameplay
 - Leverage free asset libraries to accelerate development
-- Break complex behaviors into smaller, reusable events
+- Break complex behaviors into smaller, reusable systems / components
 
-THREE.JS MATERIALS REFERENCE (for 3D game development):
-When users ask about 3D materials, textures, or rendering, use this reference:
-
+THREE.JS / BABYLON MATERIALS REFERENCE (for 3D game development):
 Material Types (ordered by performance, fastest to slowest):
-1. MeshBasicMaterial - Unlit, no shadows. Use for: backgrounds, wireframes, performance-critical scenes
-2. MeshLambertMaterial - Simple per-vertex lighting. Use for: matte surfaces (wood, stone, fabric)
-3. MeshPhongMaterial - Specular highlights. Use for: shiny surfaces (plastic, polished metal)
-4. MeshStandardMaterial - PBR (Physically Based Rendering). Use for: realistic materials (recommended default)
-5. MeshPhysicalMaterial - Advanced PBR with clearcoat, transmission. Use for: glass, car paint, gems, water
+1. MeshBasicMaterial — Unlit, no shadows. Use for: backgrounds, wireframes, performance-critical scenes
+2. MeshLambertMaterial — Simple per-vertex lighting. Use for: matte surfaces (wood, stone, fabric)
+3. MeshPhongMaterial — Specular highlights. Use for: shiny surfaces (plastic, polished metal)
+4. MeshStandardMaterial — PBR (Physically Based Rendering). Recommended default.
+5. MeshPhysicalMaterial — Advanced PBR with clearcoat, transmission. Use for: glass, car paint, gems, water
 
 Key Properties:
 - color: Base color of material
@@ -156,9 +150,9 @@ Standard PBR: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, 
 Glass: new THREE.MeshPhysicalMaterial({ transmission: 1.0, ior: 1.5, roughness: 0 })
 Car Paint: new THREE.MeshPhysicalMaterial({ metalness: 0.9, clearcoat: 1.0 })
 
-Documentation: threejs.org/manual/#en/material-table
+Documentation: threejs.org/manual/#en/material-table and doc.babylonjs.com
 
-Always provide practical, actionable advice specific to GDevelop's visual event system. Be encouraging and supportive to game creators of all skill levels. Reference available tools and assets when relevant.`;
+Always provide practical, actionable advice specific to grudgeDot and the Grudge Studio stack. Be encouraging and supportive to game creators of all skill levels. Reference available tools and assets when relevant.`;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const isProduction = process.env.NODE_ENV === "production";
@@ -333,11 +327,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fileSize) updateData.fileSize = fileSize;
       if (objectKey) updateData.uploadedAt = new Date();
 
-      await db.update(gdevelopAssets)
+      await db.update(grudgedotAssets)
         .set(updateData)
-        .where(eq(gdevelopAssets.id, id));
+        .where(eq(grudgedotAssets.id, id));
 
-      const [updatedAsset] = await db.select().from(gdevelopAssets).where(eq(gdevelopAssets.id, id)).limit(1);
+      const [updatedAsset] = await db.select().from(grudgedotAssets).where(eq(grudgedotAssets.id, id)).limit(1);
       if (!updatedAsset) {
         return res.status(404).json({ error: "Asset not found" });
       }
@@ -471,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const response = await xai!.chat.completions.create({
           model: "grok-2-1212", // Using xAI's Grok 2 model with 131K token context window - reference: javascript_xai blueprint
           messages: [
-            { role: "system", content: GDEVELOP_SYSTEM_PROMPT },
+            { role: "system", content: GRUDGEDOT_SYSTEM_PROMPT },
             ...messages.map(msg => ({
               role: msg.role as "user" | "assistant",
               content: msg.content
@@ -581,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assets", async (req, res) => {
     try {
-      const validatedData = insertGdevelopAssetSchema.parse(req.body);
+      const validatedData = insertGrudgedotAssetSchema.parse(req.body);
       const asset = await storage.createAsset(validatedData);
       res.status(201).json(asset);
     } catch (error) {
@@ -710,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getAllViewportAssets()
       ]);
 
-      // Migrate GDevelop assets
+      // Migrate legacy grudgeDot-asset-table rows
       for (const asset of gdAssets) {
         try {
           const existing = await storage.searchUnifiedAssets(asset.name);
@@ -1101,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rts/templates/:templateName", async (req, res) => {
     try {
       const { gameModeTemplates } = await import("./rtsGameModeTemplates");
-const { gdevelopToolsSchema } = await import("../shared/schema");
+const { grudgedotToolsSchema } = await import("../shared/schema");
       const templateName = req.params.templateName as "medievalWarfarePVP" | "grudgeWarsCampaign";
       const template = gameModeTemplates[templateName];
       
@@ -1109,8 +1103,8 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
         return res.status(404).json({ error: "Template not found" });
       }
 
-      // Validate gdevelopTools from template
-      const validatedTools = gdevelopToolsSchema.parse(template.gdevelopTools);
+      // Validate grudgedotTools from template
+      const validatedTools = grudgedotToolsSchema.parse(template.grudgedotTools);
 
       // Create project from template
       const projectData = {
@@ -1120,7 +1114,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
         mapData: template.mapData,
         gameSettings: template.gameSettings,
         campaignData: template.campaignData || null,
-        gdevelopTools: validatedTools,
+        grudgedotTools: validatedTools,
       };
 
       const project = await storage.createRtsProject(projectData);
@@ -1182,11 +1176,11 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
     try {
       const validatedData = insertRtsProjectSchema.parse(req.body);
       
-      // Validate gdevelopTools if provided, otherwise use default
-      if (validatedData.gdevelopTools) {
-        validatedData.gdevelopTools = gdevelopToolsSchema.parse(validatedData.gdevelopTools);
+      // Validate grudgedotTools if provided, otherwise use default
+      if (validatedData.grudgedotTools) {
+        validatedData.grudgedotTools = grudgedotToolsSchema.parse(validatedData.grudgedotTools);
       } else {
-        validatedData.gdevelopTools = { behaviors: [], extensions: [], templates: [] };
+        validatedData.grudgedotTools = { behaviors: [], extensions: [], templates: [] };
       }
       
       const project = await storage.createRtsProject(validatedData);
@@ -2712,7 +2706,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
       const { source, type, search } = req.query;
       
       // Fetch from all sources in parallel
-      const [gdevelopAssets, rtsAssets, viewportAssets] = await Promise.all([
+      const [grudgedotAssets, rtsAssets, viewportAssets] = await Promise.all([
         storage.getAllAssets(),
         storage.getAllRtsAssets(),
         storage.getAllViewportAssets(),
@@ -2729,7 +2723,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
 
       // Normalize all assets to unified format
       const catalog = [
-        ...gdevelopAssets.map(a => ({
+        ...grudgedotAssets.map(a => ({
           id: a.id,
           name: a.name,
           type: a.type,
@@ -2804,7 +2798,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
         total: catalog.length,
         filtered: filtered.length,
         sources: {
-          gdevelop: gdevelopAssets.length,
+          gdevelop: grudgedotAssets.length,
           rts: rtsAssets.length,
           viewport: viewportAssets.length,
           objectStorage: storageAssets.length,
@@ -4067,7 +4061,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
   // ============================================
   // GRUDGE ENGINE BRIDGE — Scene Export + Deploy
   // ============================================
-  // Allows GDevelop to save/load scenes from the Grudge Engine editor,
+  // Allows grudgeDot to save/load scenes from the Grudge Engine editor,
   // check engine availability, and list ObjectStore models.
 
   const ENGINE_EDITOR_URL = process.env.GRUDGE_ENGINE_URL || 'https://grudge-engine-web.vercel.app';
@@ -4140,7 +4134,7 @@ const { gdevelopToolsSchema } = await import("../shared/schema");
     res.json({ scenes });
   });
 
-  // Proxy ObjectStore model listing for GDevelop (avoids client CORS)
+  // Proxy ObjectStore model listing for grudgeDot (avoids client CORS)
   app.get("/api/engine/objectstore/models", async (req, res) => {
     try {
       const prefix = (req.query.prefix as string) || '';
