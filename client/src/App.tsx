@@ -68,6 +68,7 @@ const GrudgeEngine = lazy(() => import("@/pages/grudge-engine"));
 const GrudgeThreeEngine = lazy(() => import("@/pages/grudge-three-engine"));
 const GrudgeFlatEngine = lazy(() => import("@/pages/grudge-flat-engine"));
 const Shooter3D = lazy(() => import("@/pages/shooter-3d"));
+const BabyGrudge = lazy(() => import("@/pages/babygrudge"));
 
 function PageLoader() {
   return (
@@ -134,6 +135,7 @@ function Router() {
         <Route path="/three-engine" component={GrudgeThreeEngine} />
         <Route path="/flat-engine" component={GrudgeFlatEngine} />
         <Route path="/shooter-3d" component={Shooter3D} />
+        <Route path="/babygrudge" component={BabyGrudge} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -191,6 +193,7 @@ function Header() {
     if (location === "/three-engine") return "Grudge Three Engine";
     if (location === "/flat-engine") return "Grudge Flat Engine";
     if (location === "/shooter-3d") return "Grudge Assault";
+    if (location === "/babygrudge") return "BabyGrudge";
     return "Grudge Brawl";
   };
 
