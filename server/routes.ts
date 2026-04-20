@@ -723,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             previewUrl: asset.previewUrl,
             tags: asset.tags || [],
             description: asset.description,
-            source: asset.source || "gdevelop",
+            source: asset.source || "grudgedot",
             sourceUrl: asset.sourceUrl,
             license: "unknown",
             scope: "public",
@@ -2728,7 +2728,7 @@ const { grudgedotToolsSchema } = await import("../shared/schema");
           name: a.name,
           type: a.type,
           category: a.category,
-          source: 'gdevelop',
+          source: 'grudgedot',
           previewUrl: a.previewUrl || a.modelUrl,
           downloadUrl: a.modelUrl || a.sourceUrl,
           tags: a.tags || [],
@@ -2798,6 +2798,8 @@ const { grudgedotToolsSchema } = await import("../shared/schema");
         total: catalog.length,
         filtered: filtered.length,
         sources: {
+          grudgedot: grudgedotAssets.length,
+          // Keep 'gdevelop' alias for back-compat with existing dashboard clients.
           gdevelop: grudgedotAssets.length,
           rts: rtsAssets.length,
           viewport: viewportAssets.length,
