@@ -39,7 +39,7 @@ export function SidebarAccountWidget() {
   if (!isAuthenticated) {
     return (
       <div className="p-2">
-        <Link href="/auth">
+        <a href="https://id.grudge-studio.com/auth?app=grudgedot">
           <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-accent/30 hover:bg-accent/50 transition cursor-pointer border border-transparent hover:border-amber-500/20">
             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
               <LogIn className="w-4 h-4 text-muted-foreground" />
@@ -50,7 +50,7 @@ export function SidebarAccountWidget() {
             </div>
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
           </div>
-        </Link>
+        </a>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-# AI Systems Guide — grudgeDot Launcher
+# AI Systems Guide — grudgeDot (GGE)
 
 > How AI agents should understand, monitor, and contribute to the Grudge Studio game ecosystem.
 

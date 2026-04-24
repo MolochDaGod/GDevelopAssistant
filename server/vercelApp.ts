@@ -32,6 +32,12 @@ import OpenAI from "openai";
 
 const BACKEND = process.env.GRUDGE_BACKEND_URL || "https://api.grudge-studio.com";
 
+// Upstream path prefix on the shared Grudge VPS. Legacy installs still expose
+// `/api/gdevelop/*`; flip `GRUDGEDOT_BACKEND_PREFIX` once the VPS has been
+// renamed to `/api/grudgedot`.
+const BACKEND_API_PREFIX = process.env.GRUDGEDOT_BACKEND_PREFIX || "/api/gdevelop";
+const be = (subPath: string) => `${BACKEND_API_PREFIX}${subPath}`;
+
 /** Check if the Grudge backend URL is configured */
 function isBackendConfigured(): boolean {
   return !!process.env.GRUDGE_BACKEND_URL;
@@ -95,55 +101,12 @@ const xai = process.env.XAI_API_KEY
   ? new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.XAI_API_KEY })
   : null;
 
-const GRUDGE_DOT_BOX_SYSTEM_PROMPT = `You are an expert GrudgeDotBox game development assistant powered by xAI's Grok. You help with game design, mechanics, GDevelop event systems, asset recommendations, and integration with tools like Three.js, Babylon.js, and LUME. Be practical, actionable, and encouraging.`;
+const GRUDGEDOT_SYSTEM_PROMPT = `You are the grudgeDot assistant, powered by xAI's Grok. You help Grudge Studio creators with game design, mechanics, event systems, asset recommendations, and integration with tools like Three.js, Babylon.js, and LUME. Be practical, actionable, and encouraging.`;
 
 // ════════════════════════════════════════════
 // Auth routes (proxy to Grudge backend)
 // ════════════════════════════════════════════
 setupGrudgeAuth(app);
-
-// ── Aliases for grudge-auth-modal.js (legacy endpoints) ──
-// The external auth modal at grudge-platform.vercel.app uses these old paths.
-// Redirect them to the canonical /api/auth/* routes.
-app.get("/api/oauth-google", (req, res) => res.redirect(307, `/api/auth/google?${new URLSearchParams(req.query as Record<string, string>)}`));
-app.get("/api/oauth-github", (req, res) => res.redirect(307, `/api/auth/github?${new URLSearchParams(req.query as Record<string, string>)}`));
-app.get("/api/discord-login", (req, res) => res.redirect(307, `/api/auth/discord?${new URLSearchParams(req.query as Record<string, string>)}`));
-app.post("/api/connect-wallet", (req, res) => {
-  // Forward body to /api/auth/wallet
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
-  fetch(`${req.protocol}://${req.get("host")}/api/auth/wallet`, {
-    method: "POST", headers, body: JSON.stringify(req.body),
-  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Wallet proxy failed" }));
-});
-app.post("/api/puter", (req, res) => {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
-  fetch(`${req.protocol}://${req.get("host")}/api/auth/puter`, {
-    method: "POST", headers, body: JSON.stringify(req.body),
-  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Puter proxy failed" }));
-});
-app.post("/api/puter-link", (req, res) => {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (req.headers.authorization) headers["Authorization"] = req.headers.authorization as string;
-  fetch(`${req.protocol}://${req.get("host")}/api/auth/link-puter`, {
-    method: "POST", headers, body: JSON.stringify(req.body),
-  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Puter link proxy failed" }));
-});
-app.post("/api/phone-send", (req, res) => {
-  req.body.action = "send";
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  fetch(`${req.protocol}://${req.get("host")}/api/auth/phone`, {
-    method: "POST", headers, body: JSON.stringify(req.body),
-  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Phone send proxy failed" }));
-});
-app.post("/api/phone-verify", (req, res) => {
-  req.body.action = "verify";
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  fetch(`${req.protocol}://${req.get("host")}/api/auth/phone`, {
-    method: "POST", headers, body: JSON.stringify(req.body),
-  }).then(r => r.json()).then(data => res.json(data)).catch(() => res.status(502).json({ error: "Phone verify proxy failed" }));
-});
 
 // ════════════════════════════════════════════
 // Grudge backend proxy (/api/grudge/game|account|id|launcher)
@@ -166,7 +129,7 @@ app.get("/api/health", async (_req: Request, res: Response) => {
 
   res.json({
     status: "healthy",
-    service: "GrudgeDotBox",
+    service: "grudgeDot",
     timestamp: new Date().toISOString(),
     runtime: process.version,
     env: {
@@ -198,25 +161,25 @@ registerNftRoutes(app);
 // ════════════════════════════════════════════
 
 // ── Projects ──
-app.get("/api/projects", (req, res) => proxyGet("/api/gdevelop/projects", req, res));
-app.get("/api/projects/:id", (req, res) => proxyGet(`/api/gdevelop/projects/${req.params.id}`, req, res));
-app.post("/api/projects", (req, res) => proxyMutate("POST", "/api/gdevelop/projects", req, res));
-app.patch("/api/projects/:id", (req, res) => proxyMutate("PATCH", `/api/gdevelop/projects/${req.params.id}`, req, res));
-app.delete("/api/projects/:id", (req, res) => proxyMutate("DELETE", `/api/gdevelop/projects/${req.params.id}`, req, res));
+app.get("/api/projects", (req, res) => proxyGet(be("/projects"), req, res));
+app.get("/api/projects/:id", (req, res) => proxyGet(be(`/projects/${req.params.id}`), req, res));
+app.post("/api/projects", (req, res) => proxyMutate("POST", be("/projects"), req, res));
+app.patch("/api/projects/:id", (req, res) => proxyMutate("PATCH", be(`/projects/${req.params.id}`), req, res));
+app.delete("/api/projects/:id", (req, res) => proxyMutate("DELETE", be(`/projects/${req.params.id}`), req, res));
 
 // ── Conversations ──
-app.get("/api/conversations", (req, res) => proxyGet("/api/gdevelop/conversations", req, res));
-app.get("/api/conversations/:id", (req, res) => proxyGet(`/api/gdevelop/conversations/${req.params.id}`, req, res));
-app.post("/api/conversations", (req, res) => proxyMutate("POST", "/api/gdevelop/conversations", req, res));
-app.delete("/api/conversations/:id", (req, res) => proxyMutate("DELETE", `/api/gdevelop/conversations/${req.params.id}`, req, res));
+app.get("/api/conversations", (req, res) => proxyGet(be("/conversations"), req, res));
+app.get("/api/conversations/:id", (req, res) => proxyGet(be(`/conversations/${req.params.id}`), req, res));
+app.post("/api/conversations", (req, res) => proxyMutate("POST", be("/conversations"), req, res));
+app.delete("/api/conversations/:id", (req, res) => proxyMutate("DELETE", be(`/conversations/${req.params.id}`), req, res));
 
 // ── Messages + AI Chat ──
-app.get("/api/conversations/:id/messages", (req, res) => proxyGet(`/api/gdevelop/conversations/${req.params.id}/messages`, req, res));
+app.get("/api/conversations/:id/messages", (req, res) => proxyGet(be(`/conversations/${req.params.id}/messages`), req, res));
 
 app.post("/api/messages", async (req: Request, res: Response) => {
   try {
     // Save user message via backend
-    const msgRes = await fetch(`${BACKEND}/api/gdevelop/messages`, {
+    const msgRes = await fetch(`${BACKEND}${be("/messages")}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body),
     });
@@ -227,13 +190,13 @@ app.post("/api/messages", async (req: Request, res: Response) => {
       if (!xai) throw new Error("XAI_API_KEY not configured");
 
       // Fetch conversation history from backend
-      const histRes = await fetch(`${BACKEND}/api/gdevelop/conversations/${req.body.conversationId}/messages`);
+      const histRes = await fetch(`${BACKEND}${be(`/conversations/${req.body.conversationId}/messages`)}`);
       const history = await histRes.json();
 
       const response = await xai.chat.completions.create({
         model: "grok-2-1212",
         messages: [
-          { role: "system", content: GRUDGE_DOT_BOX_SYSTEM_PROMPT },
+          { role: "system", content: GRUDGEDOT_SYSTEM_PROMPT },
           ...history.map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content })),
         ],
         max_tokens: 4096,
@@ -243,7 +206,7 @@ app.post("/api/messages", async (req: Request, res: Response) => {
       const aiContent = response.choices[0]?.message?.content
         || "I couldn't generate a response. Please try again.";
 
-      const aiRes = await fetch(`${BACKEND}/api/gdevelop/messages`, {
+      const aiRes = await fetch(`${BACKEND}${be("/messages")}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId: req.body.conversationId, role: "assistant", content: aiContent }),
       });
@@ -251,7 +214,7 @@ app.post("/api/messages", async (req: Request, res: Response) => {
       res.status(201).json({ userMessage, aiMessage });
     } catch (aiErr: any) {
       console.error("AI Error:", aiErr.message);
-      const fbRes = await fetch(`${BACKEND}/api/gdevelop/messages`, {
+      const fbRes = await fetch(`${BACKEND}${be("/messages")}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId: req.body.conversationId, role: "assistant",
@@ -272,25 +235,25 @@ app.post("/api/messages", async (req: Request, res: Response) => {
 // ── Assets ──
 app.get("/api/assets", (req, res) => {
   const qs = new URLSearchParams(req.query as Record<string, string>).toString();
-  proxyGet(`/api/gdevelop/assets${qs ? "?" + qs : ""}`, req, res);
+  proxyGet(be(`/assets${qs ? "?" + qs : ""}`), req, res);
 });
-app.post("/api/assets", (req, res) => proxyMutate("POST", "/api/gdevelop/assets", req, res));
+app.post("/api/assets", (req, res) => proxyMutate("POST", be("/assets"), req, res));
 
 // ── Simple proxy routes ──
-app.get("/api/characters", (req, res) => proxyGet("/api/gdevelop/characters", req, res));
-app.get("/api/currencies", (req, res) => proxyGet("/api/gdevelop/currencies", req, res));
-app.get("/api/achievements", (req, res) => proxyGet("/api/gdevelop/achievements", req, res));
-app.get("/api/store", (req, res) => proxyGet("/api/gdevelop/store", req, res));
-app.get("/api/lobbies", (req, res) => proxyGet("/api/gdevelop/lobbies", req, res));
-app.get("/api/ai-behaviors", (req, res) => proxyGet("/api/gdevelop/ai-behaviors", req, res));
-app.get("/api/levels", (req, res) => proxyGet("/api/gdevelop/levels", req, res));
-app.get("/api/settings", (req, res) => proxyGet("/api/gdevelop/settings", req, res));
-app.get("/api/skill-trees", (req, res) => proxyGet("/api/gdevelop/skill-trees", req, res));
-app.post("/api/skill-trees", (req, res) => proxyMutate("POST", "/api/gdevelop/skill-trees", req, res));
-app.get("/api/rts/projects", (req, res) => proxyGet("/api/gdevelop/rts/projects", req, res));
+app.get("/api/characters", (req, res) => proxyGet(be("/characters"), req, res));
+app.get("/api/currencies", (req, res) => proxyGet(be("/currencies"), req, res));
+app.get("/api/achievements", (req, res) => proxyGet(be("/achievements"), req, res));
+app.get("/api/store", (req, res) => proxyGet(be("/store"), req, res));
+app.get("/api/lobbies", (req, res) => proxyGet(be("/lobbies"), req, res));
+app.get("/api/ai-behaviors", (req, res) => proxyGet(be("/ai-behaviors"), req, res));
+app.get("/api/levels", (req, res) => proxyGet(be("/levels"), req, res));
+app.get("/api/settings", (req, res) => proxyGet(be("/settings"), req, res));
+app.get("/api/skill-trees", (req, res) => proxyGet(be("/skill-trees"), req, res));
+app.post("/api/skill-trees", (req, res) => proxyMutate("POST", be("/skill-trees"), req, res));
+app.get("/api/rts/projects", (req, res) => proxyGet(be("/rts/projects"), req, res));
 app.get("/api/rts/assets", (req, res) => {
   const qs = new URLSearchParams(req.query as Record<string, string>).toString();
-  proxyGet(`/api/gdevelop/rts/assets${qs ? "?" + qs : ""}`, req, res);
+  proxyGet(be(`/rts/assets${qs ? "?" + qs : ""}`), req, res);
 });
 
 // ── Meshy 3D API (texture generation) ──

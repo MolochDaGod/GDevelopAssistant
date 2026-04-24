@@ -1,9 +1,9 @@
 /**
- * ObjectStore Types — Shared between Grudge Engine Web editor and GrudgeDotBox.
+ * ObjectStore Types — Shared between Grudge Engine Web editor and grudgeDot.
  * 
  * These types define the bridge format for:
  * 1. ObjectStore R2 model references used in engine scenes
- * 2. Scene export format that the grudgeDot launcher can consume for deployment
+ * 2. Scene export format that grudgeDot can consume for deployment
  * 3. Engine connection config for embedding/linking the editor
  */
 
@@ -35,7 +35,7 @@ export const objectStoreModelRefSchema = z.object({
 export type ObjectStoreModelRef = z.infer<typeof objectStoreModelRefSchema>;
 
 // ─── Scene Export Format ───
-// The format the Grudge Engine editor exports for the grudgeDot launcher to consume
+// The format the Grudge Engine editor exports for grudgeDot to consume
 
 export const sceneObjectExportSchema = z.object({
   id: z.string(),
@@ -84,7 +84,7 @@ export const sceneExportSchema = z.object({
 export type SceneExport = z.infer<typeof sceneExportSchema>;
 
 // ─── Engine Connection Config ───
-// Configuration for the grudgeDot launcher to connect to / embed the Grudge Engine editor
+// Configuration for grudgeDot to connect to / embed the Grudge Engine editor
 
 export const engineConnectionSchema = z.object({
   /** Grudge Engine Web editor URL */
@@ -103,7 +103,7 @@ export type EngineConnection = z.infer<typeof engineConnectionSchema>;
 // Request/response types for the /api/engine/scenes endpoint
 
 export const saveSceneRequestSchema = z.object({
-  /** Project ID in the grudgeDot launcher */
+  /** Project ID in grudgeDot */
   projectId: z.string(),
   /** Scene data exported from the engine */
   scene: sceneExportSchema,

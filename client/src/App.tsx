@@ -17,7 +17,6 @@ import { AuthGuard } from "@/components/AuthGuard";
 import ChatPage from "@/pages/chat";
 import NotFound from "@/pages/not-found";
 
-const AuthPage = lazy(() => import("@/pages/auth"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const TermsPage = lazy(() => import("@/pages/tos"));
 
@@ -69,7 +68,7 @@ const GrudgeEngine = lazy(() => import("@/pages/grudge-engine"));
 const GrudgeThreeEngine = lazy(() => import("@/pages/grudge-three-engine"));
 const GrudgeFlatEngine = lazy(() => import("@/pages/grudge-flat-engine"));
 const Shooter3D = lazy(() => import("@/pages/shooter-3d"));
-const ArmadaSaga = lazy(() => import("@/tabs/armada-saga/index"));
+const BabyGrudge = lazy(() => import("@/pages/babygrudge"));
 
 function PageLoader() {
   return (
@@ -136,7 +135,7 @@ function Router() {
         <Route path="/three-engine" component={GrudgeThreeEngine} />
         <Route path="/flat-engine" component={GrudgeFlatEngine} />
         <Route path="/shooter-3d" component={Shooter3D} />
-        <Route path="/armada-saga" component={ArmadaSaga} />
+        <Route path="/babygrudge" component={BabyGrudge} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -194,7 +193,7 @@ function Header() {
     if (location === "/three-engine") return "Grudge Three Engine";
     if (location === "/flat-engine") return "Grudge Flat Engine";
     if (location === "/shooter-3d") return "Grudge Assault";
-    if (location === "/armada-saga") return "Armada Saga";
+    if (location === "/babygrudge") return "BabyGrudge";
     return "Grudge Brawl";
   };
 
@@ -271,16 +270,13 @@ export default function App() {
 }
 
 /**
- * Top-level router: /auth is rendered outside AuthGuard so it's always accessible.
- * Everything else goes through AuthGuard → AppLayout.
+ * Top-level router: /privacy and /tos are public. The AuthGuard captures any
+ * token from the URL and validates it silently — no redirect-to-login, so
+ * every route is publicly accessible. Auth state is optional/progressive.
  */
 function AuthRouter() {
   return (
     <Switch>
-      <Route path="/auth">
-        <AuthPage />
-        <Toaster />
-      </Route>
       <Route path="/privacy">
         <PrivacyPage />
       </Route>

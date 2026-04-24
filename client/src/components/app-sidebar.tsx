@@ -28,8 +28,10 @@ import { getAuthData, logout } from "@/lib/auth";
 
 const engineItems = [
   {
-    title: "Grudge Web Engine",
-    url: "/engine",
+    // Single hub for all Babylon content — engine, shooter-3d, external Babylon
+    // projects, playground/docs. The rest of the launcher stays three.js-only.
+    title: "BabyGrudge",
+    url: "/babygrudge",
     icon: Cog,
     badge: "Babylon",
   },

@@ -141,7 +141,7 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">Sign in to view and manage your player profile</p>
         </div>
         <Button asChild data-testid="button-login">
-          <a href="/auth">
+          <a href="https://id.grudge-studio.com/auth?app=grudgedot">
             <LogIn className="mr-2 h-4 w-4" />
             Sign In
           </a>

@@ -1,7 +1,7 @@
 /**
  * Grudge Playground Editor Redirect System
  * 
- * Maps GrudgeDotBox editor pages to their superior Playground equivalents.
+ * Maps grudgeDot editor pages to their superior Playground equivalents.
  * These editors have been consolidated into Grudge Playground as the single
  * canonical editor for the Grudge Studio ecosystem.
  * 

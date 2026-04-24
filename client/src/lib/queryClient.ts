@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { isTokenExpired } from "@/lib/auth";
+import { isTokenExpired, redirectToLogin } from "@/lib/auth";
 
 const AUTH_TOKEN_KEY = "grudge_auth_token";
 
@@ -21,7 +21,7 @@ async function throwIfResNotOk(res: Response) {
 }
 
 /**
- * Handle 401 globally: clear stale auth data and redirect to login.
+ * Handle 401 globally: clear stale auth data and redirect to the Grudge ID SSO.
  * Debounced so multiple parallel 401s don't cause multiple redirects.
  */
 let redirecting = false;
@@ -29,10 +29,9 @@ function handleGlobal401() {
   if (redirecting) return;
   redirecting = true;
   // Clear all auth keys
-  ['grudge_auth_token', 'grudge_id', 'grudge_user_id', 'grudge_username', 'grudge_puter_auth']
+  ['grudge_auth_token', 'grudge_id', 'grudge_user_id', 'grudge_username', 'grudge_puter_auth', 'grudge_auth_provider']
     .forEach((k) => localStorage.removeItem(k));
-  const returnUrl = encodeURIComponent(window.location.pathname);
-  window.location.href = `/auth?return=${returnUrl}`;
+  redirectToLogin(window.location.href);
 }
 
 export async function apiRequest(

@@ -66,7 +66,7 @@ services:
   # Main Application
   app:
     build: .
-    container_name: grudgedot-launcher
+    container_name: grudgedot
     restart: unless-stopped
     environment:
       - NODE_ENV=production

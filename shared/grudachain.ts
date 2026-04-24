@@ -1,6 +1,6 @@
 // ============================================================
 // GRUDACHAIN Integration Config
-// Connects the grudgeDot launcher to the Grudge Studio VPS backend
+// Connects grudgeDot (GGE) to Grudge Studio VPS backend
 // and Warlord-Crafting-Suite (WCS) game systems
 // ============================================================
 

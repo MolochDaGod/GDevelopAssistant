@@ -2,7 +2,7 @@
 export default function handler(_req: any, res: any) {
   res.status(200).json({
     status: 'healthy',
-    service: 'GrudgeDotBox',
+    service: 'grudgeDo
     timestamp: new Date().toISOString(),
     runtime: process.version,
     env: {

@@ -3,25 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GrudgeDotBox — Grudge Studio Game Launcher, Editor & Saga Hub" />
+    <meta name="description" content="grudgeDot — the Grudge Studio launcher for games, crafting, and creator tools." />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GRUDGE" />
+    <meta name="apple-mobile-web-app-title" content="grudgeDot" />
     <meta name="theme-color" content="#d4af37" />
-    <meta name="application-name" content="GrudgeDotBox" />
+    <meta name="application-name" content="grudgeDot" />
     <meta name="msapplication-TileColor" content="#0a0a0f" />
 
-    <meta property="og:title" content="GrudgeDotBox - Grudge Warlords" />
-    <meta property="og:description" content="Grudge Studio game launcher and editor. Play Armada Saga, Warlords Saga, and more. AI-powered tools, crafting, progression, and multiplayer." />
+    <meta property="og:title" content="grudgeDot — Grudge Studio Launcher" />
+    <meta property="og:description" content="The grudgeDot launcher for Grudge Studio: games, crafting, progression, sprite generation, and multiplayer tools." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://grudge-dot-box-grudgenexus.vercel.app" />
+    <meta property="og:url" content="https://grudgedot.vercel.app" />
     <meta property="og:site_name" content="Grudge Studio" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@grudgewarlords" />
-    <meta name="twitter:title" content="GrudgeDotBox - Grudge Warlords" />
+    <meta name="twitter:title" content="grudgeDot — Grudge Studio Launcher" />
 
-    <title>GrudgeDotBox - Grudge Warlords</title>
+    <title>grudgeDot — Grudge Studio Launcher</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -29,7 +29,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=IM+Fell+English+SC&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Spectral+SC:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://grudge-platform.vercel.app/grudge-auth-modal.css">
   </head>
   <body>
     <div id="root"></div>
@@ -37,17 +36,15 @@
     <!-- Vite Entry Point -->
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Puter SDK -->
+    <!-- Puter SDK (client cloud storage — not used for auth) -->
     <script src="https://js.puter.com/v2/"></script>
-
-    <!-- Grudge Auth Modal (unified across all Grudge apps) -->
-    <script src="https://grudge-platform.vercel.app/grudge-auth-modal.js"></script>
 
     <!-- App Config -->
     <script>
       window.GRUDGE_APP_CONFIG = {
-        appId: 'GRUDGE_DOT_BOX',
-        version: '1.1.0',
+        appId: 'GRUDGEDOT',
+        appName: 'GrudgeDot',
+        version: '2.0.0',
         buildDate: new Date().toISOString()
       };
     </script>

@@ -2,7 +2,7 @@
  * WCS Canonical Game Data — Single Source of Truth
  *
  * Copied from Warlord-Crafting-Suite/shared/ — the authoritative definitions
- * for all Grudge Warlords game systems. Used by the grudgeDot launcher, WCS, and all Grudge games.
+ * for all Grudge Warlords game systems. Used by grudgeDot, WCS, and all Grudge games.
  */
 
 // Core systems

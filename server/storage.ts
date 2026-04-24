@@ -7,8 +7,8 @@ import {
   type InsertChatConversation,
   type ChatMessage,
   type InsertChatMessage,
-  type GDevelopAsset,
-  type InsertGdevelopAsset,
+  type GrudgedotAsset,
+  type InsertGrudgedotAsset,
   type RtsProject,
   type InsertRtsProject,
   type RtsAsset,
@@ -57,7 +57,7 @@ import {
   gameProjects,
   chatConversations,
   chatMessages,
-  gdevelopAssets,
+  grudgedotAssets,
   rtsProjects,
   rtsAssets,
   rtsUnitTemplates,
@@ -182,10 +182,10 @@ export interface IStorage {
   createMessage(message: InsertChatMessage): Promise<ChatMessage>;
 
   // Asset methods
-  getAllAssets(): Promise<GDevelopAsset[]>;
-  getAssetsByType(type: string): Promise<GDevelopAsset[]>;
-  searchAssets(query: string): Promise<GDevelopAsset[]>;
-  createAsset(asset: InsertGdevelopAsset): Promise<GDevelopAsset>;
+  getAllAssets(): Promise<GrudgedotAsset[]>;
+  getAssetsByType(type: string): Promise<GrudgedotAsset[]>;
+  searchAssets(query: string): Promise<GrudgedotAsset[]>;
+  createAsset(asset: InsertGrudgedotAsset): Promise<GrudgedotAsset>;
   seedAssets(): Promise<void>;
 
   // RTS Project methods
@@ -541,26 +541,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Asset methods
-  async getAllAssets(): Promise<GDevelopAsset[]> {
-    return db.select().from(gdevelopAssets);
+  async getAllAssets(): Promise<GrudgedotAsset[]> {
+    return db.select().from(grudgedotAssets);
   }
 
-  async getAssetsByType(type: string): Promise<GDevelopAsset[]> {
-    return db.select().from(gdevelopAssets).where(eq(gdevelopAssets.type, type));
+  async getAssetsByType(type: string): Promise<GrudgedotAsset[]> {
+    return db.select().from(grudgedotAssets).where(eq(grudgedotAssets.type, type));
   }
 
-  async searchAssets(query: string): Promise<GDevelopAsset[]> {
+  async searchAssets(query: string): Promise<GrudgedotAsset[]> {
     const searchPattern = `%${query.toLowerCase()}%`;
-    return db.select().from(gdevelopAssets).where(
+    return db.select().from(grudgedotAssets).where(
       or(
-        like(sql`LOWER(${gdevelopAssets.name})`, searchPattern),
-        like(sql`LOWER(${gdevelopAssets.description})`, searchPattern)
+        like(sql`LOWER(${grudgedotAssets.name})`, searchPattern),
+        like(sql`LOWER(${grudgedotAssets.description})`, searchPattern)
       )
     );
   }
 
-  async createAsset(insertAsset: InsertGdevelopAsset): Promise<GDevelopAsset> {
-    return insertAndGet(gdevelopAssets, gdevelopAssets.id, insertAsset);
+  async createAsset(insertAsset: InsertGrudgedotAsset): Promise<GrudgedotAsset> {
+    return insertAndGet(grudgedotAssets, grudgedotAssets.id, insertAsset);
   }
 
   async seedAssets(): Promise<void> {
@@ -574,7 +574,7 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const sampleAssets: InsertGdevelopAsset[] = [
+    const sampleAssets: InsertGrudgedotAsset[] = [
       {
         name: "Knight Character",
         type: "sprite",
@@ -601,8 +601,8 @@ export class DatabaseStorage implements IStorage {
   async seedKayKit3DModels(): Promise<void> {
     const existingAssets = await db
       .select()
-      .from(gdevelopAssets)
-      .where(eq(gdevelopAssets.source, "kaykit-skeletons"))
+      .from(grudgedotAssets)
+      .where(eq(grudgedotAssets.source, "kaykit-skeletons"))
       .limit(1);
     
     if (existingAssets.length > 0) {
@@ -612,7 +612,7 @@ export class DatabaseStorage implements IStorage {
 
     console.log("Seeding KayKit Skeleton 3D models...");
 
-    const kayKitModels: InsertGdevelopAsset[] = [
+    const kayKitModels: InsertGrudgedotAsset[] = [
       {
         name: "Skeleton Staff",
         type: "3d-model",
@@ -715,8 +715,8 @@ export class DatabaseStorage implements IStorage {
   async seedCrownClashAssets(): Promise<void> {
     const existingAssets = await db
       .select()
-      .from(gdevelopAssets)
-      .where(eq(gdevelopAssets.source, "crown-clash"))
+      .from(grudgedotAssets)
+      .where(eq(grudgedotAssets.source, "crown-clash"))
       .limit(1);
     
     if (existingAssets.length > 0) {
@@ -726,7 +726,7 @@ export class DatabaseStorage implements IStorage {
 
     console.log("Seeding Crown Clash game assets...");
 
-    const crownClashAssets: InsertGdevelopAsset[] = [
+    const crownClashAssets: InsertGrudgedotAsset[] = [
       {
         name: "Skeleton Warrior",
         type: "sprite",
@@ -848,8 +848,8 @@ export class DatabaseStorage implements IStorage {
   async seedGrudgeGangsAssets(): Promise<void> {
     const existingAssets = await db
       .select()
-      .from(gdevelopAssets)
-      .where(eq(gdevelopAssets.source, "grudge-gangs"))
+      .from(grudgedotAssets)
+      .where(eq(grudgedotAssets.source, "grudge-gangs"))
       .limit(1);
     
     if (existingAssets.length > 0) {
@@ -859,7 +859,7 @@ export class DatabaseStorage implements IStorage {
 
     console.log("Seeding Grudge Gangs MOBA assets...");
 
-    const grudgeAssets: InsertGdevelopAsset[] = [
+    const grudgeAssets: InsertGrudgedotAsset[] = [
       {
         name: "Necros Champion Icon",
         type: "sprite",
@@ -911,8 +911,8 @@ export class DatabaseStorage implements IStorage {
   async seedThreeJsExamples(): Promise<void> {
     const existingAssets = await db
       .select()
-      .from(gdevelopAssets)
-      .where(eq(gdevelopAssets.type, ASSET_TYPES.THREEJS_EXAMPLE))
+      .from(grudgedotAssets)
+      .where(eq(grudgedotAssets.type, ASSET_TYPES.THREEJS_EXAMPLE))
       .limit(1);
     
     if (existingAssets.length > 0) {
@@ -922,7 +922,7 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`Seeding ${THREEJS_EXAMPLES.length} Three.js examples...`);
 
-    const threejsAssets: InsertGdevelopAsset[] = THREEJS_EXAMPLES.map(example => ({
+    const threejsAssets: InsertGrudgedotAsset[] = THREEJS_EXAMPLES.map(example => ({
       name: example.name,
       type: ASSET_TYPES.THREEJS_EXAMPLE,
       category: example.category,
@@ -936,7 +936,7 @@ export class DatabaseStorage implements IStorage {
     const batchSize = 20;
     for (let i = 0; i < threejsAssets.length; i += batchSize) {
       const batch = threejsAssets.slice(i, i + batchSize);
-      await db.insert(gdevelopAssets).values(batch);
+      await db.insert(grudgedotAssets).values(batch);
       console.log(`Seeded ${Math.min(i + batchSize, threejsAssets.length)}/${threejsAssets.length} Three.js examples`);
     }
 

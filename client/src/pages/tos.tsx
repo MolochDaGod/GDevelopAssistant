@@ -5,9 +5,9 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-900 to-stone-950 text-stone-200">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <Link href="/auth" className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 mb-8">
           <ArrowLeft className="h-4 w-4" />
-          Back to Login
+          Back to grudgeDot
         </Link>
 
         <h1
@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-stone-100 mb-2">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using the GrudgeDotBox platform, Grudge Warlords, or any
+              By accessing or using the grudgeDot platform, Grudge Warlords, or any
               Grudge Studio services ("Services"), you agree to be bound by these Terms of
               Service. If you do not agree, do not use the Services.
             </p>
@@ -155,7 +155,7 @@ export default function TermsPage() {
         <div className="mt-10 pt-6 border-t border-stone-800 text-stone-600 text-xs text-center">
           <Link href="/privacy" className="hover:text-stone-400">Privacy Policy</Link>
           <span className="mx-2">·</span>
-          <Link href="/auth" className="hover:text-stone-400">Sign In</Link>
+          <a href="https://id.grudge-studio.com/auth?app=grudgedot" className="hover:text-stone-400">Sign In</a>
         </div>
       </div>
     </div>
