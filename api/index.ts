@@ -16,7 +16,7 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   if (!res.headersSent) {
     res.status(500).json({
       error: "Internal server error",
-      service: "GDevelop Assistant",
+      service: "GrudgeDotBox",
       timestamp: new Date().toISOString(),
     });
   }

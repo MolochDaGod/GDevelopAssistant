@@ -128,7 +128,7 @@ export function hasAuthToken(): boolean {
 /** Redirect to unified Grudge auth page at id.grudge-studio.com. */
 export function redirectToLogin(customReturnUrl?: string) {
   const returnUrl = encodeURIComponent(customReturnUrl || window.location.href);
-  window.location.href = `${GRUDGE_AUTH_URL}?redirect=${returnUrl}&app=gdevelop`;
+  window.location.href = `${GRUDGE_AUTH_URL}?redirect=${returnUrl}&app=grudge-dot-box`;
 }
 
 /**

@@ -6,7 +6,7 @@ const GAME_ORIGIN = 'https://grudge-warlords-rts.vercel.app';
 /**
  * Grudge Warlords RTS tab — embeds the standalone RTS in an iframe
  * and exposes a postMessage bridge for asset/config injection from the
- * GDevelop parent frame.
+ * GrudgeDotBox parent frame.
  *
  * PostMessage API (send to iframe):
  *   { type: 'asset:override-sprite', unitType, action, src }
@@ -30,10 +30,10 @@ export default function GrudgeWarlordsRtsTab() {
       const { type, ...payload } = e.data ?? {};
       switch (type) {
         case 'rts:ready':
-          console.log('[GDevelop] RTS iframe ready, can send asset overrides');
+          console.log('[GrudgeDotBox] RTS iframe ready, can send asset overrides');
           break;
         case 'rts:game-event':
-          console.log('[GDevelop] RTS game event:', payload);
+          console.log('[GrudgeDotBox] RTS game event:', payload);
           break;
       }
     };

@@ -221,7 +221,7 @@ export default function AccountPage() {
               {[
                 { label: 'War Chest', href: '/wallet', icon: Wallet, desc: 'GBUX & Gold' },
                 { label: 'Characters', href: '/characters', icon: Sword, desc: 'Create & customize' },
-                { label: 'GDevelop Games', href: '/games', icon: Gamepad2, desc: 'Play all games' },
+                { label: 'GrudgeDotBox Games', href: '/games', icon: Gamepad2, desc: 'Play all games' },
                 { label: 'Achievements', href: '/achievements', icon: Trophy, desc: 'Your glory' },
               ].map(link => (
                 <Link key={link.href} href={link.href}>
@@ -400,7 +400,7 @@ export default function AccountPage() {
               <CardHeader><CardTitle className="text-base">Per-Game Scores</CardTitle></CardHeader>
               <CardContent>
                 {summary.allGames.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">Play some games from the <Link href="/games"><span className="text-amber-400 hover:underline">GDevelop launcher</span></Link> to see your stats here!</p>
+                  <p className="text-sm text-muted-foreground py-4 text-center">Play some games from the <Link href="/games"><span className="text-amber-400 hover:underline">GrudgeDotBox launcher</span></Link> to see your stats here!</p>
                 ) : (
                   <div className="space-y-2">
                     {summary.allGames.map(g => (

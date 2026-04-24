@@ -86,7 +86,7 @@ const xai = process.env.XAI_API_KEY
     })
   : null;
 
-const GDEVELOP_SYSTEM_PROMPT = `You are an expert GDevelop game development assistant powered by xAI's Grok. GDevelop is an open-source, cross-platform game creator that allows users to create 2D and 3D games without programming using visual events.
+const GRUDGE_DOT_BOX_SYSTEM_PROMPT = `You are an expert GrudgeDotBox game development assistant powered by xAI's Grok. GDevelop is an open-source, cross-platform game creator that allows users to create 2D and 3D games without programming using visual events.
 
 Key capabilities you should help with:
 - Game design and mechanics guidance
@@ -104,7 +104,7 @@ Key capabilities you should help with:
   * Stemkoski Three.js Examples (stemkoski.github.io/Three.js) - 83 heavily commented examples teaching Three.js fundamentals including chase camera, particle systems, collision detection, mouse interaction, sprite labels, and shader effects
   * Babylon.js viewer for 3D model visualization
   * Terrain generators like wgen for procedural world building
-  * GDevelop's web editor for rapid prototyping
+  * GrudgeDotBox's web editor for rapid prototyping
 
 For RTS (Real-Time Strategy) games specifically, recommend these GDevelop built-in behaviors and extensions:
 - Top-down Movement behavior (built-in, always available): Allows units to move in 4 or 8 directions with keyboard, gamepad, or virtual stick controls. Configure acceleration (400-600 px/s²), max speed (200-400 px/s), and rotation settings. Documentation: wiki.gdevelop.io/gdevelop5/behaviors/topdown/
@@ -158,7 +158,7 @@ Car Paint: new THREE.MeshPhysicalMaterial({ metalness: 0.9, clearcoat: 1.0 })
 
 Documentation: threejs.org/manual/#en/material-table
 
-Always provide practical, actionable advice specific to GDevelop's visual event system. Be encouraging and supportive to game creators of all skill levels. Reference available tools and assets when relevant.`;
+Always provide practical, actionable advice specific to GrudgeDotBox's visual event system. Be encouraging and supportive to game creators of all skill levels. Reference available tools and assets when relevant.`;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const isProduction = process.env.NODE_ENV === "production";
@@ -471,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const response = await xai!.chat.completions.create({
           model: "grok-2-1212", // Using xAI's Grok 2 model with 131K token context window - reference: javascript_xai blueprint
           messages: [
-            { role: "system", content: GDEVELOP_SYSTEM_PROMPT },
+            { role: "system", content: GRUDGE_DOT_BOX_SYSTEM_PROMPT },
             ...messages.map(msg => ({
               role: msg.role as "user" | "assistant",
               content: msg.content

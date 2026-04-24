@@ -21,8 +21,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-stone-100 mb-2">1. Introduction</h2>
             <p>
-              Grudge Studio ("we", "us", "our") operates the GDevelop Assistant platform and
-              Grudge Warlords game ecosystem at gdevelop-assistant.vercel.app and related
+              Grudge Studio ("we", "us", "our") operates the GrudgeDotBox platform and
+              Grudge Warlords game ecosystem at grudge-dot-box.vercel.app and related
               services. This Privacy Policy explains how we collect, use, and protect your
               information when you use our services.
             </p>

@@ -95,7 +95,7 @@ const xai = process.env.XAI_API_KEY
   ? new OpenAI({ baseURL: "https://api.x.ai/v1", apiKey: process.env.XAI_API_KEY })
   : null;
 
-const GDEVELOP_SYSTEM_PROMPT = `You are an expert GDevelop game development assistant powered by xAI's Grok. You help with game design, mechanics, GDevelop event systems, asset recommendations, and integration with tools like Three.js, Babylon.js, and LUME. Be practical, actionable, and encouraging.`;
+const GRUDGE_DOT_BOX_SYSTEM_PROMPT = `You are an expert GrudgeDotBox game development assistant powered by xAI's Grok. You help with game design, mechanics, GDevelop event systems, asset recommendations, and integration with tools like Three.js, Babylon.js, and LUME. Be practical, actionable, and encouraging.`;
 
 // ════════════════════════════════════════════
 // Auth routes (proxy to Grudge backend)
@@ -166,7 +166,7 @@ app.get("/api/health", async (_req: Request, res: Response) => {
 
   res.json({
     status: "healthy",
-    service: "GDevelop Assistant",
+    service: "GrudgeDotBox",
     timestamp: new Date().toISOString(),
     runtime: process.version,
     env: {
@@ -233,7 +233,7 @@ app.post("/api/messages", async (req: Request, res: Response) => {
       const response = await xai.chat.completions.create({
         model: "grok-2-1212",
         messages: [
-          { role: "system", content: GDEVELOP_SYSTEM_PROMPT },
+          { role: "system", content: GRUDGE_DOT_BOX_SYSTEM_PROMPT },
           ...history.map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content })),
         ],
         max_tokens: 4096,

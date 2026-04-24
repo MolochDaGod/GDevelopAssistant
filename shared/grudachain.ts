@@ -1,13 +1,14 @@
 // ============================================================
 // GRUDACHAIN Integration Config
-// Connects GDevelopAssistant (GGE) to Grudge Studio VPS backend
+// Connects the grudgeDot launcher to the Grudge Studio VPS backend
 // and Warlord-Crafting-Suite (WCS) game systems
 // ============================================================
 
 // Deployment URLs (overridable via env)
 // Game API runs on VPS via Coolify/Docker + Traefik
 // GRUDA Legion production runs on the Grudge Studio VPS via Coolify/Traefik.
-// grudachain.grudgestudio.com is the GrudaChain *frontend* (Cloudflare Pages) — NOT the backend.
+// grudachain.grudge-studio.com is the GrudaChain *frontend* (Cloudflare Pages) — NOT the backend.
+// (The legacy grudachain.grudgestudio.com host — no-hyphen zone — is retired; redirect to the hyphenated canonical domain.)
 export const GRUDACHAIN_URL = process.env.GRUDACHAIN_URL || "https://api.grudge-studio.com";
 export const WCS_URL = process.env.WCS_URL || "https://warlord-crafting-suite.vercel.app";
 

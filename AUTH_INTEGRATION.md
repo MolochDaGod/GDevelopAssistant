@@ -127,17 +127,17 @@ GRUDGE_BACKEND_URL=https://id.grudge-studio.com
 # Discord OAuth
 DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
-# Redirect URI: https://gdevelop-assistant.vercel.app/api/auth/discord/callback
+# Redirect URI: https://api.grudge-studio.com/api/auth/discord/callback
 
 # GitHub OAuth
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
-# Redirect URI: https://gdevelop-assistant.vercel.app/api/auth/github/callback
+# Redirect URI: https://api.grudge-studio.com/api/auth/github/callback
 
 # Google OAuth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-# Redirect URI: https://gdevelop-assistant.vercel.app/api/auth/google/callback
+# Redirect URI: https://api.grudge-studio.com/api/auth/google/callback
 ```
 
 `SESSION_SECRET` is the JWT signing key used by all Grudge apps sharing the same `accounts` table.  
@@ -169,15 +169,15 @@ The `buildAuthRedirect()` function in `server/grudgeAuth.ts` dynamically constru
 callback URLs from the incoming request's `Host` header. This eliminates hardcoded redirect
 domains and ensures OAuth works automatically on:
 
-- **Vercel production**: `gdevelop-assistant.vercel.app`
-- **Vercel preview branches**: `gdevelop-assistant-git-*.vercel.app`
+- **Cloudflare Pages production**: `grudgedot.grudge-studio.com`
+- **Pages preview branches**: `*.grudgedot-launcher.pages.dev`
 - **Grudge Studio subdomains**: `*.grudge-studio.com`
 - **Legacy domains**: `*.grudgestudio.com`
 - **Local development**: `localhost:5000`
 
 When registering OAuth apps with providers (Google, Discord, GitHub), add **all** expected
 callback URLs. For Vercel, the pattern is:
-- `https://gdevelop-assistant.vercel.app/api/auth/{provider}/callback`
+- `https://api.grudge-studio.com/api/auth/{provider}/callback`
 - `http://localhost:5000/api/auth/{provider}/callback` (for local dev)
 
 ## Backend Connectivity

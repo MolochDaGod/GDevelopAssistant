@@ -10,7 +10,8 @@
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$root = "F:\GDevelopAssistant\public\assets\tps"
+# Repo-relative destination so the script works regardless of local folder name.
+$root = Join-Path $PSScriptRoot "..\public\assets\tps"
 
 # ── Create directories ──
 $dirs = @(

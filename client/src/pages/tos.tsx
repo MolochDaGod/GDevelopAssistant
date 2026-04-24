@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-stone-100 mb-2">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using the GDevelop Assistant platform, Grudge Warlords, or any
+              By accessing or using the GrudgeDotBox platform, Grudge Warlords, or any
               Grudge Studio services ("Services"), you agree to be bound by these Terms of
               Service. If you do not agree, do not use the Services.
             </p>

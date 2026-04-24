@@ -16,15 +16,21 @@ import {
 import { CLASS_IDS } from "../../../../shared/wcs/gameConstants";
 
 const WEAPON_ICONS: Record<string, string> = {
-  SWORD: "⚔️", AXE: "🪓", BOW: "🏹", STAFF: "🪄", DAGGER: "🗡️",
-  MACE: "🔨", HAMMER: "⚒️", SPEAR: "🔱", WAND: "✨", SCYTHE: "💀",
+  SWORD: "⚔️", TWO_H_SWORD: "🗡️", AXE: "🪓", TWO_H_AXE: "🪓",
+  BOW: "🏹", CROSSBOW: "🏹", GUN: "🔫",
+  STAFF: "🪄", WAND: "✨", TOME: "📖",
+  DAGGER: "🗡️", MACE: "🔨", HAMMER: "⚒️",
+  SPEAR: "🔱", LANCE: "🏹", SCYTHE: "💀",
+  SHIELD: "🛡️", OFF_HAND_RELIC: "🔮",
 };
 
-const SLOT_LABELS: Record<number, { name: string; color: string }> = {
-  1: { name: "Basic", color: "hsl(0 0% 70%)" },
-  2: { name: "Power", color: "hsl(220 80% 60%)" },
-  3: { name: "Utility", color: "hsl(280 70% 60%)" },
-  4: { name: "Ultimate", color: "hsl(35 100% 55%)" },
+/** Slot-to-hotkey mapping: slot N = hotkey N. Slot 1 is the standard-attack pick. */
+const SLOT_LABELS: Record<number, { name: string; hotkey: string; color: string; hint?: string }> = {
+  1: { name: "Standard", hotkey: "1", color: "hsl(0 0% 70%)",    hint: "Pick one of two auto-attacks" },
+  2: { name: "Basic",    hotkey: "2", color: "hsl(200 70% 60%)" },
+  3: { name: "Power",    hotkey: "3", color: "hsl(220 80% 60%)" },
+  4: { name: "Utility",  hotkey: "4", color: "hsl(280 70% 60%)" },
+  5: { name: "Ultimate", hotkey: "5", color: "hsl(35 100% 55%)" },
 };
 
 export default function WeaponSkillsPage() {
@@ -45,7 +51,7 @@ export default function WeaponSkillsPage() {
 
   const skillsBySlot = useMemo(() => {
     if (!tree) return {};
-    const grouped: Record<number, WeaponSkill[]> = { 1: [], 2: [], 3: [], 4: [] };
+    const grouped: Record<number, WeaponSkill[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     for (const skill of tree.skills) {
       grouped[skill.slot]?.push(skill);
     }
@@ -86,7 +92,7 @@ export default function WeaponSkillsPage() {
             </div>
           </div>
           <div className="ml-auto text-[10px] text-[hsl(45_15%_55%)]">
-            {tree.skills.length} skills · 4 slots
+            {tree.skills.length} skills · 5 hotkeys
           </div>
         </div>
       )}
@@ -94,7 +100,7 @@ export default function WeaponSkillsPage() {
       {/* Skills by Slot */}
       <ScrollArea className="h-[calc(100vh-260px)]">
         <div className="space-y-4">
-          {([1, 2, 3, 4] as const).map(slot => {
+          {([1, 2, 3, 4, 5] as const).map(slot => {
             const skills = skillsBySlot[slot] || [];
             const slotMeta = SLOT_LABELS[slot];
             if (skills.length === 0) return null;
@@ -102,11 +108,21 @@ export default function WeaponSkillsPage() {
               <div key={slot} className="fantasy-panel p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: slotMeta.color }} />
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
+                    style={{ borderColor: `${slotMeta.color}60`, color: slotMeta.color, backgroundColor: `${slotMeta.color}14` }}
+                    title={`Hotkey ${slotMeta.hotkey}`}
+                  >
+                    [{slotMeta.hotkey}]
+                  </span>
                   <h4 className="font-[var(--font-heading)] text-xs tracking-widest uppercase" style={{ color: slotMeta.color }}>
-                    Slot {slot} — {slotMeta.name}
+                    {slotMeta.name}
                   </h4>
+                  {slotMeta.hint && (
+                    <span className="text-[10px] italic text-[hsl(45_15%_55%)]">{slotMeta.hint}</span>
+                  )}
                   <span className="text-[10px] text-[hsl(45_15%_50%)] ml-auto">
-                    {skills.length} skills · Max {slot === 4 ? 3 : 5} upgrades
+                    {skills.length} skill{skills.length === 1 ? "" : "s"} · Max {slot === 5 ? 3 : 5} upgrades
                   </span>
                 </div>
 

@@ -1,4 +1,5 @@
 [
+  { "slug": "armada-saga", "title": "Armada Saga", "entry": "tabs/armada-saga/index.tsx" },
   { "slug": "grudge-swarm", "title": "Grudge Swarm RTS", "entry": "tabs/grudge-swarm/index.tsx" },
   { "slug": "mmo", "title": "MMO World", "entry": "tabs/mmo/index.tsx" },
   { "slug": "grudge-drive", "title": "Grudge Drive", "entry": "tabs/grudge-drive/index.tsx" },

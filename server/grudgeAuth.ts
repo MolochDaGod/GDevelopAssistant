@@ -44,7 +44,7 @@ async function proxyAuth(
     console.error(`[Auth Proxy ${backendPath}] error:`, err.message);
     res.status(502).json({
       error: "Auth service unavailable",
-      service: "GDevelop Assistant",
+      service: "GrudgeDotBox",
       hint: "Grudge ID at " + AUTH_URL + " may be offline",
     });
   }

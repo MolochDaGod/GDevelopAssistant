@@ -69,6 +69,7 @@ const GrudgeEngine = lazy(() => import("@/pages/grudge-engine"));
 const GrudgeThreeEngine = lazy(() => import("@/pages/grudge-three-engine"));
 const GrudgeFlatEngine = lazy(() => import("@/pages/grudge-flat-engine"));
 const Shooter3D = lazy(() => import("@/pages/shooter-3d"));
+const ArmadaSaga = lazy(() => import("@/tabs/armada-saga/index"));
 
 function PageLoader() {
   return (
@@ -135,6 +136,7 @@ function Router() {
         <Route path="/three-engine" component={GrudgeThreeEngine} />
         <Route path="/flat-engine" component={GrudgeFlatEngine} />
         <Route path="/shooter-3d" component={Shooter3D} />
+        <Route path="/armada-saga" component={ArmadaSaga} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -192,10 +194,11 @@ function Header() {
     if (location === "/three-engine") return "Grudge Three Engine";
     if (location === "/flat-engine") return "Grudge Flat Engine";
     if (location === "/shooter-3d") return "Grudge Assault";
+    if (location === "/armada-saga") return "Armada Saga";
     return "Grudge Brawl";
   };
 
-  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/drift", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis", "/engine", "/three-engine", "/flat-engine", "/shooter-3d"].some(
+  const isGamePage = ["/crown-clash", "/platformer", "/puzzle", "/runner", "/shooter", "/flight", "/realm", "/moba", "/arena", "/grudge-drive", "/drift", "/decay", "/swarm-rts", "/swarm-galactic", "/grudge-swarm", "/gruda-wars", "/mmo", "/betta-warlords", "/grudge-box", "/crypt-crawlers", "/warlord-suite", "/nexus-nemesis", "/engine", "/three-engine", "/flat-engine", "/shooter-3d", "/armada-saga"].some(
     path => location === path
   );
 

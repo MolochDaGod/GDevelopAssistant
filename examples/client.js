@@ -1,5 +1,5 @@
 /**
- * Example client demonstrating how to use GDevelop Assistant services
+ * Example client demonstrating how to use GrudgeDotBox services
  */
 
 const io = require('socket.io-client');
@@ -250,7 +250,7 @@ async function runExample() {
     process.exit(1);
   }
 
-  console.log('\n=== Running GDevelop Assistant Examples ===\n');
+  console.log('\n=== Running GrudgeDotBox Examples ===\n');
 
   // AI Agent examples
   console.log('--- AI Agent Examples ---');
