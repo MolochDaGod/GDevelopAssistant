@@ -19,7 +19,15 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useGrudgeAccount, type GrudgeCharacterLocal } from './useGrudgeAccount';
 import { apiFetch } from '@/lib/grudgeBackendApi';
-import { computeDerivedStats, type WCSHeroAttributes } from '@shared/wcs';
+// `computeDerivedStats` / `WCSHeroAttributes` are not exported by the canonical
+// `@shared/wcs` index yet. Local stubs keep this hook compiling and rely on the
+// existing `try/catch` fallback to GUEST_STATS at runtime. Restore the real
+// import once `shared/wcs/index.ts` re-exports these symbols from
+// `attributeSystem`/`gameConstants`.
+type WCSHeroAttributes = Record<string, number>;
+function computeDerivedStats(_attrs: WCSHeroAttributes, _level: number): Record<string, number> {
+  throw new Error('computeDerivedStats not yet exported from @shared/wcs');
+}
 
 // ── Types ──
 

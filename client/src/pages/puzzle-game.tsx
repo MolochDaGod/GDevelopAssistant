@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
 import { GrudgeGameWrapper } from '@/components/GrudgeGameWrapper';
 import type { GrudgeGameSession } from '@/hooks/useGrudgeGameSession';
-  Play, 
-  Pause, 
-  Home, 
+import {
+  Play,
+  Pause,
+  Home,
   RotateCcw,
   Trophy,
   Timer,
